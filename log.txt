@@ -1,0 +1,31 @@
+https://docs.julialang.org/en/v1/stdlib/Pkg/
+
+https://juliaimages.org/latest/install/
+
+decision made:
+    type of output 
+        X_image_dim x Y_image_dim x #_classes
+
+http://denizyuret.github.io/Knet.jl/v0.8.2/tutorial.html#Linear-regression-1
+
+
+https://machinelearningmastery.com/how-to-choose-loss-functions-when-training-deep-learning-neural-networks/
+
+https://github.com/denizyuret/Knet.jl/blob/6f27c1d551925534ece37ca742d47e8b6b2a5d09/src/loss.jl#L206-L216
+
+http://denizyuret.github.io/Knet.jl/v1.1/reference.html
+
+
+
+Deeplabcut/pose_estimation_tensorflow/nnet/predict.py
+def getposeNP(image, cfg, sess, inputs, outputs, outall=False):
+
+scmap ifadesi geçiyor
+
+
+Problem can be handled as key point detection
+https://hackernoon.com/key-point-detection-in-flower-images-using-deep-learning-66a06aadc765
+
+
+incelenesi: 
+https://github.com/KnetML/Knet-the-Julia-dope
