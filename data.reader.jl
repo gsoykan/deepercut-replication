@@ -1,10 +1,13 @@
 using Images, FileIO
 using CSV
+using ImageTransformations
+using Distributed
 
-#  TODO: add rescaling images
-function read_images(path) 
+function read_images(path, resize_image_dim_x, resize_image_dim_y) 
     image_paths = map(path -> "$image_folder_path/$path", filter(path -> contains(path, ".png"), readdir(image_folder_path)))
     loaded_images = map(path -> Float32.(channelview(load(path))), (image_paths))
+    channel_size =  size(loaded_images[1])[begin]
+    loaded_images = pmap(img -> imresize(img, channel_size, resize_image_dim_x, resize_image_dim_y), loaded_images)
     single_image_size = size(loaded_images[1])
     vcatted_images = vcat(loaded_images...)
     reshape(vcatted_images, (length(image_paths), single_image_size...))
@@ -54,8 +57,14 @@ function read_labels_as_keypoints(path, image_x_dim, image_y_dim, number_of_cate
     return reshaped_labels
 end
 
-function read_all_data(path, image_x_dim, image_y_dim, number_of_categories)
-    image_data = read_images(path)
+function read_all_data(path,
+        image_x_dim,
+        image_y_dim,
+        number_of_categories; 
+        resized_image_dim_x,
+        resized_image_dim_y
+     )
+    image_data = read_images(path, resized_image_dim_x, resized_image_dim_y)
     label_data = read_labels_as_keypoints(path, image_x_dim, image_y_dim, number_of_categories)
     return (image_data, label_data)
 end

@@ -20,3 +20,18 @@ function compute_accuracy_for_sets(model, named_x_y_tuples)
     end
     return accuracy_dict
 end
+
+function compute_mae_for_data(model, data)
+    sum = 0
+    count = 0
+    for (x, y) in data 
+        current_res = model(x)
+        sum += simple_mae(current_res, y)
+        count += 1
+    end
+    return sum / count
+end
+
+function simple_mae(x, y)
+    sum(abs, (x - y)) / size(y)[end]
+end
