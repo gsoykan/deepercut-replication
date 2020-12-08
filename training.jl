@@ -4,11 +4,11 @@ function trainresults(file, model, data_trn, data_tst, cycle_count, learning_rat
     snapshot() = (deepcopy(model),
      model(data_trn),
       model(data_tst),
-      0, 0, 0, 0)
+      0, 0, 
+          compute_accuracy_in_training(model, data_trn, accuracy_func),
+          compute_accuracy_in_training(model, data_tst, accuracy_func))
        # compute_error_in_training(model, data_trn, error_func),
          # compute_error_in_training(model, data_tst, error_func), 
-         # compute_accuracy_in_training(model, data_trn, accuracy_func),
-         # compute_accuracy_in_training(model, data_tst, accuracy_func))
     snapshots = (snapshot() for x in takenth(progress(training), length(data_trn)))
     results = reshape(collect(flatten(snapshots)), (7, :))
     if (should_save) 

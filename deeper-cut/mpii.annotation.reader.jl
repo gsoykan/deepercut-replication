@@ -15,7 +15,11 @@ end
 # TODO: add this to config
 path_to_processed_mat = "/home/gsoykan/Desktop/comp541/mpii-dataset/cropped/dataset.mat"
 global_num_joints = 14
-max_image_number_to_read = 64
+
+validation_image_count = 32
+train_image_count = 256
+max_image_number_to_read = validation_image_count + train_image_count
+
 global_scale = 0.8452830189
 preprocess_stride = 32
 pos_dist_thresh = 17
