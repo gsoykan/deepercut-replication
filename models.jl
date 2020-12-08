@@ -35,6 +35,10 @@ struct Chain
     Chain(layers...; lambda1=0, lambda2=0, loss=nll) = new(layers, lambda1, lambda2, loss)
 end
 
+struct Deconv; w; stride; padding; end
+Deconv(w1, w2, nx, ny; stride=1, padding=0) = Deconv(param(w1, w2, nx, ny), stride, padding)
+(dc::Deconv)(x) = deconv4(dc.w, x; stride=dc.stride, padding=dc.padding)
+
 # The prediction and average loss do not change
 
 # TODO: make loss function modular 
@@ -58,7 +62,6 @@ ResLayerConv(w1, w2, nx, ny; padding=0, stride=1) = ResLayerConv(param(w1, w2, n
 ResLayerConv(w; padding=0, stride=1) = ResLayerConv(param(w), padding, stride)
 (rl0::ResLayerConv)(x) = conv4(rl0.w, x; padding=rl0.padding, stride=rl0.stride)
 
-
 # X0
 struct ResLayerX0; batch_w; conv_w; ms; padding; stride; end
 # Predetermined weights
@@ -70,7 +73,6 @@ ResLayerX0(w, ms; padding=0, stride=1) = ResLayerX0(
         padding, 
         stride)
 (rlx0::ResLayerX0)(x) =  batchnorm_as_function(rlx0.batch_w, conv4(rlx0.conv_w, x; padding=rlx0.padding, stride=rlx0.stride), rlx0.ms) 
-
 
 # X1
 struct ResLayerX1; x0_layer; is_initial::Bool; end
@@ -140,7 +142,6 @@ function (rlx5::ResLayerX5)(x)
     else
         return x
     end
-
 end
 
 

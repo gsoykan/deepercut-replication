@@ -1,0 +1,1 @@
+add_dim(x::Array) = reshape(x, (size(x)..., 1));
