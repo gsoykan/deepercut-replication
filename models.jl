@@ -62,17 +62,46 @@ ResLayerConv(w1, w2, nx, ny; padding=0, stride=1) = ResLayerConv(param(w1, w2, n
 ResLayerConv(w; padding=0, stride=1) = ResLayerConv(param(w), padding, stride)
 (rl0::ResLayerConv)(x) = conv4(rl0.w, x; padding=rl0.padding, stride=rl0.stride)
 
+struct BatchNormLayer; w; ms; 
+
+    function BatchNormLayer(pre_w, pre_ms)
+        res_mean = popfirst!(pre_ms)
+        res_variance =   popfirst!(pre_ms).^2 
+        ms = bnmoments(mean=res_mean, var=res_variance)
+
+        w1 = pre_w[1]
+        w2 = pre_w[2]
+        w1 = vec(w1)
+        w2 = vec(w2)
+        w =  vcat(w1, w2)
+        return new(w, ms)
+    end
+
+end
+
+function (batch_norm_layer::BatchNormLayer)(x)
+    return batchnorm(x, batch_norm_layer.ms, batch_norm_layer.w; eps=1e-5)
+end 
+
 # X0
-struct ResLayerX0; batch_w; conv_w; ms; padding; stride; end
+struct ResLayerX0; batch_layer; conv_w; padding; stride; end
 # Predetermined weights
 # TODO: not sure if we should make batch_w as param here + throws error
-ResLayerX0(w, ms; padding=0, stride=1) = ResLayerX0(
-        w[2:3],
+function ResLayerX0(w, ms; padding=0, stride=1)
+    bnl = BatchNormLayer(w[2:3], ms)
+    return   ResLayerX0(
+        bnl,        
         param(w[1]; atype=Knet.atype()), 
-        ms,
         padding, 
         stride)
-(rlx0::ResLayerX0)(x) =  batchnorm_as_function(rlx0.batch_w, conv4(rlx0.conv_w, x; padding=rlx0.padding, stride=rlx0.stride), rlx0.ms) 
+end
+
+function (rlx0::ResLayerX0)(x) 
+   # batchnorm_as_function(rlx0.batch_w, conv4(rlx0.conv_w, x; padding=rlx0.padding, stride=rlx0.stride), rlx0.ms) 
+    o = conv4(rlx0.conv_w, x; padding=rlx0.padding, stride=rlx0.stride)
+    o = rlx0.batch_layer(o)
+    return o
+end
 
 # X1
 struct ResLayerX1; x0_layer; is_initial::Bool; end
