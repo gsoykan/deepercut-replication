@@ -66,7 +66,8 @@ struct BatchNormLayer; w; ms;
 
     function BatchNormLayer(pre_w, pre_ms)
         res_mean = popfirst!(pre_ms)
-        res_variance =   popfirst!(pre_ms).^2 
+        # Trick to arrange variance value for new(er) batchnorm
+        res_variance =   popfirst!(pre_ms).^2  .- 1e-5
         ms = bnmoments(mean=res_mean, var=res_variance)
 
         w1 = pre_w[1]
