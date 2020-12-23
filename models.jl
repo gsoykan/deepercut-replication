@@ -19,9 +19,15 @@ MLPLayer(i::Int,o::Int,f=relu; pdrop=0) = MLPLayer(param(o, i), param0(o), f, pd
 (l::MLPLayer)(x) = l.f.(l.w * dropout(x, l.pdrop) .+ l.b)
 
 # Define convolutional layer:
-struct Conv2; w; b; f; end
-Conv2(w1,w2,nx,ny, f=relu) = Conv2(param(w1, w2, nx, ny), param0(1, 1, ny, 1), f)
-(c::Conv2)(x) = pool(c.f.(conv4(c.w, x) .+ c.b))
+struct Conv2; w; b; f; is_pool_enabled::Bool; end
+Conv2(w1,w2,nx,ny, f=relu; is_pool_enabled=true) = Conv2(param(w1, w2, nx, ny), param0(1, 1, ny, 1), f, is_pool_enabled)
+function (c::Conv2)(x) 
+    if c.is_pool_enabled
+        pool(c.f.(conv4(c.w, x) .+ c.b))
+    else
+        c.f.(conv4(c.w, x) .+ c.b)
+    end
+end
 
 # Define dense layer:
 struct Dense; w; b; f; p; end
@@ -30,21 +36,40 @@ Dense(w, b; f=identity, pdrop=0) = Dense(param(w; atype=Knet.atype()), param(b; 
 (d::Dense)(x) = d.f.(d.w * mat(dropout(x, d.p)) .+ d.b) 
 
 # Define a chain of layers and a loss function:
-struct Chain
-    layers; lambda1; lambda2; loss;
-    Chain(layers...; lambda1=0, lambda2=0, loss=nll) = new(layers, lambda1, lambda2, loss)
+struct DeeperCutOption
+    connect_res3_to_res5::Bool
 end
 
-struct Deconv; w; stride; padding; end
-Deconv(w1, w2, nx, ny; stride=1, padding=0, atype=Knet.atype()) = Deconv(param(w1, w2, nx, ny;atype=atype), stride, padding)
-
-(dc::Deconv)(x) = deconv4(dc.w, x; stride=dc.stride, padding=dc.padding)
+struct Chain
+    layers; lambda1; lambda2; loss; deeperCutOption
+    Chain(layers...; lambda1=0, lambda2=0, loss=nll, deeperCutOption=nothing) = new(layers, lambda1, lambda2, loss, deeperCutOption)
+end
 
 # The prediction and average loss do not change
+function (c::Chain)(x)  
+    connection_from3_to5 = nothing;
+    for l in c.layers    
+         x = l(x)
+        
+        if c.deeperCutOption.connect_res3_to_res5 
+            layer_tag = get_object_tag(l)
+            if layer_tag == 3 
+                connection_from3_to5 = l.conv3_for_deepercut_output(x)
+            end
+        end
+        
+        if c.deeperCutOption.connect_res3_to_res5 
+            layer_tag = get_object_tag(l)
+            if layer_tag == "part_detect_deconv" 
+                x = x .+ connection_from3_to5 
+            end
+        end
+         
+    end 
+    
+    x
+end
 
-# TODO: make loss function modular 
-
-(c::Chain)(x) = (for l in c.layers; x = l(x); end; x)
 function (c::Chain)(x, y)
     loss = c.loss(c(x), y)
     if training() # Only apply regularization during training, only to weights, not biases.
@@ -54,6 +79,14 @@ function (c::Chain)(x, y)
     return loss
 end
 (c::Chain)(d::Data) = mean(c(x, y) for (x, y) in d)
+
+
+
+struct Deconv; w; stride; padding; tag::String; end
+Deconv(w1, w2, nx, ny; stride=1, padding=0, atype=Knet.atype(), tag="") = Deconv(param(w1, w2, nx, ny;atype=atype), stride, padding, tag)
+
+(dc::Deconv)(x) = deconv4(dc.w, x; stride=dc.stride, padding=dc.padding)
+
 
 # This became redundant now
 struct ResLayerConv; w; padding; stride; end
@@ -187,15 +220,21 @@ ResLayerX4(w, ms; pads=[ 0, 1, 0], strides=[1, 1, 1], dilations=[1,1,1]) = ResLa
 
 # X5
 struct ResLayerX5;
-    x3_layer::ResLayerX3; x4_layers;  is_next_fc::Bool;
-
+    x3_layer::ResLayerX3;
+    x4_layers; 
+    is_next_fc::Bool;
+    conv3_for_deepercut_output;
+    tag;
 end
+
 
 function ResLayerX5(w, ms; 
         strides=[2, 2, 1, 1],
         is_next_fc::Bool=false, 
         b_layer_dilations=[1, 1, 1],
-        b_layer_pads=[0, 1, 0]
+        b_layer_pads=[0, 1, 0],
+        is_conv3_for_deepercut=false,
+        tag=nothing
     )
     x3_layer::ResLayerX3 = ResLayerX3(w[1:12], ms; strides=strides)
     x4_layers = []
@@ -203,8 +242,15 @@ function ResLayerX5(w, ms;
         layer = ResLayerX4(w[k:k + 8], ms; dilations=b_layer_dilations, pads=b_layer_pads)
         push!(x4_layers, layer)
     end
-    return ResLayerX5(x3_layer, x4_layers, is_next_fc)
-end 
+    
+    conv3_for_deepercut_output = nothing
+    if is_conv3_for_deepercut
+            # 14 layer for part detection
+        conv3_for_deepercut_output = Conv2(1, 1, 512, global_num_joints, identity; is_pool_enabled=false)
+    end
+    
+    return ResLayerX5(x3_layer, x4_layers, is_next_fc, conv3_for_deepercut_output, tag)
+    end 
 
 function (rlx5::ResLayerX5)(x) 
     x = rlx5.x3_layer(x)
@@ -217,13 +263,4 @@ function (rlx5::ResLayerX5)(x)
     else
         return x
     end
-end
-
-
-
-
-
-
-
-
-
+end 

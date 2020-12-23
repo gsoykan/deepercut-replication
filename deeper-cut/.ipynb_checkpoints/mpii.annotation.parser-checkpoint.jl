@@ -40,11 +40,11 @@ function preprocess_single_image_features(img_data, max_h, max_w)
     # scaled_max_w = make_even(scaled_max_w)
    
     # TODO: this might be changed later
-    scaled_max_w = 128
-    scaled_max_h = 128
+    scaled_max_w = read_image_w
+    scaled_max_h = read_image_h
 
-    scale_h = convert(Float32, scaled_max_h / img_data.size[2]) 
-    scale_w = convert(Float32,  scaled_max_w / img_data.size[3]) 
+    scale_h = convert(Float32, scaled_max_h / img_data.size[3]) 
+    scale_w = convert(Float32,  scaled_max_w / img_data.size[2]) 
     scales = (scale_h, scale_w)
    
     resized_image = imresize(loaded_image, scaled_max_h, scaled_max_w)

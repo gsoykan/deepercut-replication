@@ -2,12 +2,13 @@ using Knet
 include("../helper.jl")
 include("mpii.annotation.parser.jl")
 
-function get_mpii_batches(batch_size)
+function get_mpii_batches(batch_size; should_shuffle=false)
+    dataset = read_cropped_mpii_annotations(;should_shuffle=should_shuffle)
     dtrn = []
     step_size = 256
     for i in 1:step_size:(train_image_count + 1)
         println(i)
-        train_dataset = get_dataset(i, i + step_size - 1)
+        train_dataset = get_from_dataset(dataset, i, i + step_size - 1)
         if isempty(train_dataset)
             println("continued")
             continue
@@ -15,19 +16,18 @@ function get_mpii_batches(batch_size)
         train_preprocessed = preprocess_dataset(train_dataset)
         dtrn_part = get_batch(batch_size, train_preprocessed)
         if isempty(dtrn)
-           dtrn = dtrn_part
+            dtrn = dtrn_part
             println("$(summary(dtrn))")
         else
             append_to_data!(dtrn, dtrn_part)
             println("$(summary(dtrn))")
-        
         end
         train_dataset = 0
         train_preprocessed = 0
         GC.gc(true)
     end
     
-    validation_dataset = get_dataset(train_image_count + 1, train_image_count + validation_image_count)
+    validation_dataset = get_from_dataset(dataset, train_image_count + 1, train_image_count + validation_image_count)
     validation_preprocessed = preprocess_dataset(validation_dataset)
     dval = get_batch(batch_size, validation_preprocessed)    
     
@@ -58,7 +58,8 @@ function get_batch(batch_size, preprocessed)
         batch_size;
         xsize=(xsize..., :),
         ysize=(ysize..., :), 
-        xtype=Knet.atype())
+        xtype=Knet.atype(), 
+        shuffle=true)
     return d
 end
 

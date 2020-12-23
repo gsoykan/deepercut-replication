@@ -2,17 +2,43 @@ import CUDA
 include("models.jl")
 using MAT, OffsetArrays, FFTViews, ArgParse, Images, ImageMagick, Knet
 
-#=
-DeeperCut Training Recipe
+function get_params(params, atype)
+    len = length(params["value"])
+    ws, ms = [], []
+    for k = 1:len
+        name = params["name"][k]
+        value = convert(Array{Float32}, params["value"][k])
 
-- Then, we decrease the stride of the first convolutional layers of the conv5 bank from 2 px 
-to 1 px to prevent down-sampling. 
+        if endswith(name, "moments")
+            push!(ms, reshape(value[:,1], (1,1,size(value,1),1)))
+            push!(ms, reshape(value[:,2], (1,1,size(value,1),1)))
+        elseif startswith(name, "bn")
+            push!(ws, reshape(value, (1,1,length(value),1)))
+        elseif startswith(name, "fc") && endswith(name, "filter")
+            push!(ws, transpose(reshape(value,(size(value,3),size(value,4)))))
+        elseif startswith(name, "conv") && endswith(name, "bias")
+            push!(ws, reshape(value, (1,1,length(value),1)))
+        else
+            push!(ws, value)
+        end
+    end
+    map(wi->convert(atype, wi), ws),
+    map(mi->convert(atype, mi), ms)
+end
 
-- Next, we add holes to all 3x3 convolutions in conv5 to preserve their receptive field. This reduces the stride of the full CNN to 16 px.
+function get_modular_resnet(should_use_resnet50::Bool)
+    model_file_path = should_use_resnet50 ? "/userfiles/gsoykan20/resnet_pretrained/imagenet-resnet-50-dag.mat" : "/userfiles/gsoykan20/resnet_pretrained/imagenet-resnet-152-dag.mat"
 
-=#
-
-
+o = Dict(
+  :atype => KnetArray{Float32},
+  :model => model_file_path,
+  :top   => 10
+)
+model = matread(abspath(o[:model]))
+w, ms = get_params(model["params"], o[:atype]);
+    
+    modular_resnet = should_use_resnet50 ? generate_headless_resnet50_from_weights(w, ms) : generate_headless_resnet_from_weights(w, ms);
+end
 
 function generate_resnet_from_weights(w, ms)
     conv1 = ResLayerX1(w[1:3], ms; padding=3, stride=2, is_initial=true)
@@ -36,7 +62,7 @@ function generate_headless_resnet_from_weights(w, ms)
     r2 = ResLayerX5(w[4:33], ms; strides=[1, 1, 1, 1])
     r3 = ResLayerX5(w[34:108], ms)
     r4 = ResLayerX5(w[109:435], ms)
-    r5 = ResLayerX5(w[436:465], ms; strides=[1,1,1,1])
+    r5 = ResLayerX5(w[436:465], ms;strides=[1,1,1,1], b_layer_dilations=[1, 2, 1], b_layer_pads=[0,2,0])
     return Chain(
         conv1,
         r2,
@@ -63,12 +89,24 @@ function generate_resnet50_from_weights(w, ms)
     )
 end
 
-function generate_headless_resnet50_from_weights(w, ms)
+# The output size is compatable with Upsampled Conv5 bank
+function generate_headless_resnet50_from_weights_until_3rd_bank(w, ms)
     layer1 = ResLayerX1_50(w[1:4], ms)
     r2 = ResLayerX5(w[5:34], ms; strides=[1, 1, 1, 1])
     r3 = ResLayerX5(w[35:73], ms)
+        return Chain(
+        layer1,
+        r2,
+        r3
+    )
+end
+
+function generate_headless_resnet50_from_weights(w, ms)
+    layer1 = ResLayerX1_50(w[1:4], ms)
+    r2 = ResLayerX5(w[5:34], ms; strides=[1, 1, 1, 1])
+    r3 = ResLayerX5(w[35:73], ms; tag=3, is_conv3_for_deepercut=true)
     r4 = ResLayerX5(w[74:130], ms)
-    r5 = ResLayerX5(w[131:160], ms; strides=[1,1,1,1], b_layer_dilations=[1, 2, 1], b_layer_pads=[0,2,0])
+    r5 = ResLayerX5(w[131:160], ms; tag=5, strides=[1,1,1,1], b_layer_dilations=[1, 2, 1], b_layer_pads=[0,2,0])
         return Chain(
         layer1,
         r2,
