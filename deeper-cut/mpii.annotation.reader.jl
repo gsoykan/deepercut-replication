@@ -9,7 +9,33 @@ struct DataItem
     joints::Array
     is_single::Bool
     annorect::Dict{String, Any}
+    
+    function DataItem(original_data_item::DataItem, new_h_size, new_w_size; shift_idx=true)
+        copied_data_item = deepcopy(original_data_item)
+        if (shift_idx)
+            copied_data_item.joints[:, 1] .+= 1
+        end
+        
+         scale_h = convert(Float32, new_h_size / copied_data_item.size[2]) 
+    scale_w = convert(Float32,  new_w_size / copied_data_item.size[3]) 
+        
+        copied_data_item.size[2] = new_h_size
+        copied_data_item.size[3] = new_w_size
+        
+        copied_data_item.joints[:, 2] = round.(Array{Float32}(copied_data_item.joints[:, 2]) .*= scale_w)
+         copied_data_item.joints[:, 3] = round.(Array{Float32}(copied_data_item.joints[:, 3]) .*= scale_h)
+        
+        # Changing annorect is enough, no need to scale annopoints 
+        copied_data_item.annorect["x1"] *= scale_w
+        copied_data_item.annorect["x2"] *= scale_w
+        copied_data_item.annorect["y1"] *= scale_h
+        copied_data_item.annorect["y2"] *= scale_h
+        
+       return copied_data_item 
+    end
 end
+
+
 
 # cfg.all_joints = [      [0, 5], [1, 4], [2, 3], [6, 11], [7, 10],  [8, 9],     [12],      [13]]
 # cfg.all_joints_names = ['ankle', 'knee', 'hip', 'wrist', 'elbow', 'shoulder', 'chin', 'forehead']
@@ -23,10 +49,10 @@ path_to_multi_person_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/annolis
 global_num_joints = 14
 
 # Total image count => 28883
-validation_image_count = 128
-train_image_count = 1024
-read_image_w = 256
-read_image_h = 256
+validation_image_count = 32
+train_image_count = 128
+read_image_w = 128
+read_image_h = 128
 max_image_number_to_read = validation_image_count + train_image_count
 
 global_scale = 0.8452830189
@@ -35,6 +61,7 @@ pos_dist_thresh = 17
 output_consider_threshold = 0.05
 # TODO: learn how this was computed 
 global_locref_stdev = 7.2801
+PCKh_range=1
 
 function read_cropped_mpii_annotations(;should_shuffle=false)
     file = matopen(path_to_processed_mat)

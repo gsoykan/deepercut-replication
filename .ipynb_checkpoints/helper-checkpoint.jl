@@ -18,15 +18,26 @@ data.y = cat(data.y, another_data.y, dims=2)
     data.indices = 1:data.length
 end
 
-function model_end_results(model, train_data, validation_data)
+function model_end_results(model, train_data, validation_data; train_data_items, validation_data_items)
     train_loss = model(train_data)
     validation_loss = model(validation_data)
     train_acc = modelized_naive_pck_sigm(model, train_data)
     validation_acc = modelized_naive_pck_sigm(model, validation_data)
+    
+    train_acc_pckh = nothing
+    validation_acc_pckh = nothing
+    
+    if train_data_items != nothing && validation_data_items != nothing
+      train_acc_pckh = modelized_PCKh_sigm(model, train_data, train_data_items)
+        validation_acc_pckh = modelized_PCKh_sigm(model, validation_data, validation_data_items)
+    end
+    
     end_res_dict = Dict("train_loss" => train_loss, 
         "validation_loss" => validation_loss,
         "train_acc" => train_acc,
-        "validation_acc" => validation_acc
+        "validation_acc" => validation_acc,
+            "train_acc_PCKh" => train_acc_pckh,
+        "validation_PCKh" => validation_acc_pckh,
     )
     for (k, v) in end_res_dict
         println("$(k): $(v)")

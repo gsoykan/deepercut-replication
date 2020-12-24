@@ -9,6 +9,13 @@ function draw_plots(results)
     
     trnerr,tsterr = Array{Float32}(results[4,:]), Array{Float32}(results[5,:]) 
     plot_error = plot([trnerr,tsterr],ylim=(.0,.12),labels=["trnerr" "valerr"],xlabel="Epochs",ylabel="Error")
+    
+    trnacc_pckh, tstacc_pckh = Array{Float32}(results[8,:]), Array{Float32}(results[9,:]) 
+    plot_acc_pckh = plot([trnacc_pckh, tstacc_pckh],ylim=(.0,1.0),labels=["tracc_pckh" "valacc_pckh"],xlabel="Epochs",ylabel="Accuracy PCKh@0.5")
 
-    foreach(display, [plot_loss,  plot_acc, plot_error])  
+    foreach(display, 
+            [plot_loss, 
+            plot_acc,
+            plot_acc_pckh,
+            plot_error])  
 end

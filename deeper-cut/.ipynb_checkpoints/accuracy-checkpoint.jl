@@ -41,6 +41,77 @@ end
 # TODO: impl PCKH
 # NOW it should not be that hard
 
+# Data Items needs to be scaled beforehand
+function original_pckh(output,
+        data_items;
+        h_range=PCKh_range,
+        consider_threshold=output_consider_threshold)
+    
+    num_elements = size(output)[4]
+    num_joints = global_num_joints
+    correct_counter = 0
+    
+       for idx in 1:num_elements
+        
+            data_item = data_items[idx]
+            visible_joint_ids = data_item.joints[:, 1]
+        
+            head_corner_one = (data_item.annorect["x1"], data_item.annorect["y1"]) 
+            head_corner_two = (data_item.annorect["x2"], data_item.annorect["y2"]) 
+            head_size = get_head_size(head_corner_one, head_corner_two)
+        
+        for j in 1:num_joints
+            joint_sc = output[:, :, j, idx]
+            joint_sc[ joint_sc .< consider_threshold] .= 0  
+            max_coord = argmax(joint_sc)
+           
+            if !(j in visible_joint_ids)
+                if joint_sc[max_coord] == 0 
+                    correct_counter += 1
+                end
+            elseif joint_sc[max_coord] == 0
+                continue;
+            else
+                
+                data_joint_idx = findlast(x -> x[1] == j ,data_item.joints)[1]
+                joint_gold = data_item.joints[data_joint_idx, :][2:3]
+                
+                pred = (max_coord[2], max_coord[1])
+                
+                # TODO: LocRef offset will be here as well when it is implemented
+                pred_f8 = pred .* preprocess_stride .+ 0.5*preprocess_stride
+                
+                # TODO: Let's check if coords are on same cartesian
+                dist_PCKh = get_distance_in_PCKh(pred_f8, joint_gold, head_size)
+                
+                if dist_PCKh <= h_range
+                   correct_counter += 1     
+                end
+            end
+        end
+    end
+    
+    acc = 100.0 * correct_counter / (num_elements * num_joints)
+    return acc
+end
+
+function modelized_PCKh_sigm(model, data, data_items; h_range=PCKh_range,
+        consider_threshold=output_consider_threshold)
+    results = []
+    
+    original_x_data = Knet.atype()(reshape(data.x, data.xsize));
+    
+    output = Array{Float32}(sigm.(model(original_x_data)))
+        
+    pck = original_pckh(output, data_items; h_range=h_range, consider_threshold=consider_threshold)
+       
+    push!(results, pck)
+    
+    
+    final = sum(results) / length(results)
+    return final / 100
+end
+
 # Naive Accuracy
 
 # https://www.programmersought.com/article/7644537351/#:~:text=1.,PCK%20%2D%20Percentage%20of%20Correct%20Keypoints&text=calculates%20the%20percentage%20of%20detections,used%20as%20a%20normalized%20reference.

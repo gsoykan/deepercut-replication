@@ -5,7 +5,7 @@ include("mpii.annotation.parser.jl")
 function get_mpii_batches_and_data_items(batch_size; should_shuffle=false)
     dataset = read_cropped_mpii_annotations(;should_shuffle=should_shuffle)
     dtrn = []
-    step_size = 256
+    step_size = 128
     for i in 1:step_size:(train_image_count + 1 - step_size)
         println(i)
         train_dataset = get_from_dataset(dataset, i, i + step_size - 1)
@@ -38,7 +38,8 @@ function get_mpii_batches_and_data_items(batch_size; should_shuffle=false)
     GC.gc(true)
     
     data_items = get_from_dataset(dataset, 1, train_image_count + validation_image_count)
-    
+    data_items = map(d_i -> DataItem(d_i, read_image_h, read_image_w), data_items)
+
     return  (dtrn, dval, data_items)
 end
 
