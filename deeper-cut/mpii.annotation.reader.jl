@@ -10,6 +10,17 @@ struct DataItem
     is_single::Bool
     annorect::Dict{String, Any}
     
+    function DataItem(
+        id::Int,
+    path::String,
+    size::Array{Float64},
+    joints::Array,
+    is_single::Bool,
+    annorect::Dict{String, Any}
+        )
+        return new(id, path, size, joints, is_single, annorect)
+    end
+    
     function DataItem(original_data_item::DataItem, new_h_size, new_w_size; shift_idx=true)
         copied_data_item = deepcopy(original_data_item)
         if (shift_idx)
@@ -51,8 +62,8 @@ global_num_joints = 14
 # Total image count => 28883
 validation_image_count = 32
 train_image_count = 128
-read_image_w = 128
-read_image_h = 128
+read_image_w = 256
+read_image_h = 256
 max_image_number_to_read = validation_image_count + train_image_count
 
 global_scale = 0.8452830189
@@ -62,6 +73,7 @@ output_consider_threshold = 0.05
 # TODO: learn how this was computed 
 global_locref_stdev = 7.2801
 PCKh_range=1
+whole_dataset_count = 28883
 
 function read_cropped_mpii_annotations(;should_shuffle=false)
     file = matopen(path_to_processed_mat)
@@ -144,6 +156,7 @@ function get_from_dataset(dataset, initial_index=1, last_index=max_image_number_
 end
 
 function raw_data_to_data_item(indexed_raw_data) 
+   
     i = indexed_raw_data[1]
     img_path = indexed_raw_data[2][1]
     img_size = indexed_raw_data[2][2]
@@ -153,7 +166,6 @@ function raw_data_to_data_item(indexed_raw_data)
     if (!id_check)
         throw(DomainError(joints_data, "invalid joint id"))
     end
-    
     is_single = indexed_raw_data[2][4]
     annorect = indexed_raw_data[2][5]
     

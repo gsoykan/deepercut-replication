@@ -98,14 +98,29 @@ end
 function modelized_PCKh_sigm(model, data, data_items; h_range=PCKh_range,
         consider_threshold=output_consider_threshold)
     results = []
-    
+
     original_x_data = Knet.atype()(reshape(data.x, data.xsize));
+    batchsize = data.batchsize
+    total_element_count = size(original_x_data)[4]
     
-    output = Array{Float32}(sigm.(model(original_x_data)))
+    batch_coefficient = floor(total_element_count / batchsize) |> Int 
+    total_element_count = batch_coefficient * batchsize
         
-    pck = original_pckh(output, data_items; h_range=h_range, consider_threshold=consider_threshold)
+    for i in 1:batchsize:total_element_count
+    
+        datapart = original_x_data[:, :, :, i: i + batchsize - 1]
+        dataitem_part = data_items[i: i + batchsize - 1]
+        
+        output = Array{Float32}(sigm.(model( datapart )))
+        pck = original_pckh(output,
+            dataitem_part;
+            h_range=h_range,
+            consider_threshold=consider_threshold)
        
     push!(results, pck)  
+    end
+    
+   
     
     final = sum(results) / length(results)
     return final / 100
