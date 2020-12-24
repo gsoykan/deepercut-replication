@@ -2,11 +2,11 @@ using Knet
 include("../helper.jl")
 include("mpii.annotation.parser.jl")
 
-function get_mpii_batches(batch_size; should_shuffle=false)
+function get_mpii_batches_and_data_items(batch_size; should_shuffle=false)
     dataset = read_cropped_mpii_annotations(;should_shuffle=should_shuffle)
     dtrn = []
     step_size = 256
-    for i in 1:step_size:(train_image_count + 1)
+    for i in 1:step_size:(train_image_count + 1 - step_size)
         println(i)
         train_dataset = get_from_dataset(dataset, i, i + step_size - 1)
         if isempty(train_dataset)
@@ -27,18 +27,22 @@ function get_mpii_batches(batch_size; should_shuffle=false)
         GC.gc(true)
     end
     
+    # TODO: There might be small intersection between validation and train data
+    
     validation_dataset = get_from_dataset(dataset, train_image_count + 1, train_image_count + validation_image_count)
     validation_preprocessed = preprocess_dataset(validation_dataset)
-    dval = get_batch(batch_size, validation_preprocessed)    
+    dval = get_batch(batch_size, validation_preprocessed; shuffle_in_minibatch=false)    
     
     validation_dataset = 0
     validation_preprocessed = 0
     GC.gc(true)
     
-    return  (dtrn, dval)
+    data_items = get_from_dataset(dataset, 1, train_image_count + validation_image_count)
+    
+    return  (dtrn, dval, data_items)
 end
 
-function get_batch(batch_size, preprocessed)
+function get_batch(batch_size, preprocessed; shuffle_in_minibatch=true)
     y_scmap = map(element -> element[3], preprocessed);
     y_scmap_weights = map(element -> add_dim(element[4]), preprocessed);
     y_locref_map = map(element -> element[5], preprocessed);
@@ -59,7 +63,7 @@ function get_batch(batch_size, preprocessed)
         xsize=(xsize..., :),
         ysize=(ysize..., :), 
         xtype=Knet.atype(), 
-        shuffle=true)
+        shuffle=shuffle_in_minibatch)
     return d
 end
 

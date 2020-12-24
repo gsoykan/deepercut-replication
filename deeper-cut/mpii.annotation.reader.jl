@@ -1,11 +1,14 @@
 using MAT
 using Distributed
+using Random
 
 struct DataItem 
     id::Int
     path::String
     size::Array{Float64}
     joints::Array
+    is_single::Bool
+    annorect::Dict{String, Any}
 end
 
 # cfg.all_joints = [      [0, 5], [1, 4], [2, 3], [6, 11], [7, 10],  [8, 9],     [12],      [13]]
@@ -14,11 +17,14 @@ end
 
 # TODO: add this to config
 path_to_processed_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/dataset.mat"
+path_to_single_person_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/annolist-singlePerson-h400.mat"
+path_to_full_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/annolist-full-h400.mat"
+path_to_multi_person_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/annolist-multPerson-h400.mat"
 global_num_joints = 14
 
 # Total image count => 28883
-validation_image_count = 8
-train_image_count = 256
+validation_image_count = 128
+train_image_count = 1024
 read_image_w = 256
 read_image_h = 256
 max_image_number_to_read = validation_image_count + train_image_count
@@ -26,7 +32,7 @@ max_image_number_to_read = validation_image_count + train_image_count
 global_scale = 0.8452830189
 preprocess_stride = 8
 pos_dist_thresh = 17
-output_consider_threshold = 0.25
+output_consider_threshold = 0.05
 # TODO: learn how this was computed 
 global_locref_stdev = 7.2801
 
@@ -48,14 +54,65 @@ function reformat_dataset!(dataset, should_shuffle)
     dataset["size"] = map(e -> e[2],vecced)
     dataset["image"] = map(e -> e[1],vecced)
     dataset["joints"] = map(e -> e[3],vecced)
+    
+    image_metas = find_annorect_and_is_single_info(dataset["image"]);
+    dataset["is_single"] = image_metas[:, 1]
+    dataset["annorect"] = image_metas[:, 2]
     return dataset
 end
 
+function find_annorect_and_is_single_info(dataset_images)
+    file = matopen(path_to_multi_person_mat);
+    multi_person = read(file);
+    close(file);
+    
+    file = matopen(path_to_single_person_mat);
+    single_person = read(file);
+    close(file);
+    
+    single_image_paths = map(x -> x["name"], single_person["annolist"]["image"])
+    single_image_paths = vec(single_image_paths);
+    
+    multi_image_paths = map(x -> x["name"], multi_person["annolist"]["image"])
+    multi_image_paths = vec(multi_image_paths);
+    
+    image_metas = map(image_path -> find_image_idx_in_single_multi_meta(image_path, single_image_paths, multi_image_paths, single_person, multi_person) ,dataset_images)
+    
+    vcatted_image_metas = vcat(image_metas...);
+    return vcatted_image_metas
+end
+
+function find_image_idx_in_single_multi_meta(image_name, single_paths, multi_paths, single_person, multi_person)
+    is_single = true;
+    found_idx = findlast(x -> x == image_name ,single_paths)
+    if found_idx == nothing 
+        found_idx = findlast(x -> x == image_name, multi_paths)
+        is_single = false
+    elseif found_idx == nothing
+        throw(DomainError(image_name, "image path not found in netiher single nor multi"))
+    end
+    
+    if is_single
+        annorect = single_person["annolist"]["annorect"][1, found_idx]
+    else
+        annorect = multi_person["annolist"]["annorect"][1, found_idx]
+    end
+    
+    if annorect == nothing 
+     throw(DomainError(image_name, "image path has no annorect"))
+    end
+    
+    return reshape([is_single, annorect], (1 ,2))
+end
+
+# TODO: add is_single and annorect here
 function get_from_dataset(dataset, initial_index=1, last_index=max_image_number_to_read)   
     sizes = dataset["size"][initial_index: last_index]
     images = dataset["image"][initial_index: last_index]
     joints = dataset["joints"][initial_index: last_index]
-    data_items = pmap(raw_data_to_data_item, enumerate(zip(images, sizes, joints)))
+    is_singles = dataset["is_single"][initial_index: last_index]
+    annorects = dataset["annorect"][initial_index: last_index]
+    data_items = pmap(raw_data_to_data_item, enumerate(zip(images, sizes, joints, is_singles, annorects)))
     return data_items
 end
 
@@ -69,5 +126,9 @@ function raw_data_to_data_item(indexed_raw_data)
     if (!id_check)
         throw(DomainError(joints_data, "invalid joint id"))
     end
-    return DataItem(i, img_path, img_size, joints_data)
+    
+    is_single = indexed_raw_data[2][4]
+    annorect = indexed_raw_data[2][5]
+    
+    return DataItem(i, img_path, img_size, joints_data, is_single, annorect)
 end

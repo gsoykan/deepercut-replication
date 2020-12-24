@@ -1,4 +1,47 @@
+using(LinearAlgebra)
 include("mpii.annotation.reader.jl")
+
+
+
+#=
+function headSize = util_get_head_size(rect)
+SC_BIAS = 0.6; % 0.8*0.75
+headSize = SC_BIAS*norm([rect.x2 rect.y2] - [rect.x1 rect.y1]);
+end
+=#
+
+function get_head_size(corner_one, corner_two)
+    # TODO: This can be parameterized
+    SC_BIAS = 0.6
+    head_size = SC_BIAS * norm(corner_one .- corner_two)
+    return head_size
+end
+
+#=
+function dist = getDistPCKh(pred,gt,refDist)
+
+assert(size(pred,1) == size(gt,1) && size(pred,2) == size(gt,2) && size(pred,3) == size(gt,3));
+assert(size(refDist,1) == size(gt,3));
+
+dist = nan(1,size(pred,2),size(pred,3));
+
+for imgidx = 1:size(pred,3)
+    
+    % distance to gt joints
+    dist(1,:,imgidx) = sqrt(sum((pred(:,:,imgidx) - gt(:,:,imgidx)).^2,1))./refDist(imgidx);
+
+end
+=#
+
+function get_distance_in_PCKh(pred, gt, head_size)
+    pckh = sqrt(sum(( pred .- gt ) .^2)) / head_size
+    return pckh
+end
+
+# TODO: impl PCKH
+# NOW it should not be that hard
+
+# Naive Accuracy
 
 # https://www.programmersought.com/article/7644537351/#:~:text=1.,PCK%20%2D%20Percentage%20of%20Correct%20Keypoints&text=calculates%20the%20percentage%20of%20detections,used%20as%20a%20normalized%20reference.
 
@@ -54,14 +97,3 @@ function modelized_naive_pck_sigm_with_wrong_cache(model, data, wrong_scs_cache)
     final = sum(results) / length(results)
     return final / 100
 end
-
-#=
-function headSize = util_get_head_size(rect)
-
-SC_BIAS = 0.6; % 0.8*0.75
-headSize = SC_BIAS*norm([rect.x2 rect.y2] - [rect.x1 rect.y1]);
-
-end
-
-and headsize is used for distance threshold
-=#
