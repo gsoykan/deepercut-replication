@@ -60,10 +60,12 @@ path_to_multi_person_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/annolis
 global_num_joints = 14
 
 # Total image count => 28883
-validation_image_count = 32
-train_image_count = 128
-read_image_w = 256
-read_image_h = 256
+# multi-person image count => 9698
+# single-person image count => 19185 ( 17440 - 1744 )
+validation_image_count = 64
+train_image_count = 512
+read_image_w = 512
+read_image_h = 512
 max_image_number_to_read = validation_image_count + train_image_count
 
 global_scale = 0.8452830189
@@ -72,6 +74,7 @@ pos_dist_thresh = 17
 output_consider_threshold = 0.05
 # TODO: learn how this was computed 
 global_locref_stdev = 7.2801
+locref_loss_weight = 0.05
 PCKh_range=1
 whole_dataset_count = 28883
 

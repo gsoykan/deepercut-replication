@@ -95,7 +95,6 @@ function compute_targets_weights(joint_ids, coords, size)
     locref_mask = zeros(locref_shape)
     locref_map = zeros(locref_shape)
     
-    
     dist_thresh_sq = abs2(dist_thresh)
     
     width = size[2]

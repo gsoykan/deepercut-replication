@@ -1,3 +1,4 @@
+include("./deeper-cut/mpii.annotation.reader.jl")
 using Plots; default(fmt = :png)
 
 function draw_plots(results)
@@ -11,7 +12,7 @@ function draw_plots(results)
     plot_error = plot([trnerr,tsterr],ylim=(.0,.12),labels=["trnerr" "valerr"],xlabel="Epochs",ylabel="Error")
     
     trnacc_pckh, tstacc_pckh = Array{Float32}(results[8,:]), Array{Float32}(results[9,:]) 
-    plot_acc_pckh = plot([trnacc_pckh, tstacc_pckh],ylim=(.0,1.0),labels=["tracc_pckh" "valacc_pckh"],xlabel="Epochs",ylabel="Accuracy PCKh@0.5")
+    plot_acc_pckh = plot([trnacc_pckh, tstacc_pckh],ylim=(.0,1.0),labels=["tracc_pckh" "valacc_pckh"],xlabel="Epochs",ylabel="Accuracy PCKh@$(PCKh_range)")
 
     foreach(display, 
             [plot_loss, 

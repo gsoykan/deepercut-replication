@@ -1,42 +1,77 @@
-function trainresults(file, model, data_trn, data_tst, learning_rate_per_epoch, optimizer=sgd, should_save=false; accuracy_func=accuracy, 
-        error_func,
-        secondary_accuracy_func,
-        data_items_trn,
-        data_items_val)
+function trainresults(
+    file,
+    model,
+    data_trn,
+    data_tst,
+    learning_rate_per_epoch,
+    optimizer = sgd,
+    should_save = false;
+    accuracy_func = accuracy,
+    error_func,
+    secondary_accuracy_func,
+    data_items_trn,
+    data_items_val,
+)
     GC.gc(true)
-    
+
+    # TODO: we can make better use of it no need to run forward pass multiple times
     function snapshot(i)
-       return (0,
-     model(data_trn),
-      model(data_tst),
-      0, 0, 
-          compute_accuracy_in_training(model, data_trn, accuracy_func),
-          compute_accuracy_in_training(model, data_tst, accuracy_func),
-            compute_secondary_accuracy_in_training(model, data_trn, data_items_trn, secondary_accuracy_func),
-            compute_secondary_accuracy_in_training(model, data_tst, data_items_val, secondary_accuracy_func)
-            ) 
+        return (
+            0,
+            model(data_trn),
+            model(data_tst),
+            0,
+            0,
+            compute_accuracy_in_training(model, data_trn, accuracy_func),
+            compute_accuracy_in_training(model, data_tst, accuracy_func),
+            compute_secondary_accuracy_in_training(
+                model,
+                data_trn,
+                data_items_trn,
+                secondary_accuracy_func,
+            ),
+            compute_secondary_accuracy_in_training(
+                model,
+                data_tst,
+                data_items_val,
+                secondary_accuracy_func,
+            ),
+        )
     end
-       # compute_error_in_training(model, data_trn, error_func),
-         # compute_error_in_training(model, data_tst, error_func), 
-        
+    # compute_error_in_training(model, data_trn, error_func),
+    # compute_error_in_training(model, data_tst, error_func), 
+
     results = []
     for (lr, for_epoch) in learning_rate_per_epoch
-            training = optimizer(model, ncycle(data_trn, for_epoch), lr=lr)
-    snapshots = (snapshot(x) for x in takenth(progress(training), length(data_trn))) 
-     intermediate_res = reshape(collect(flatten(snapshots)), (9, :))
+        training = optimizer(model, ncycle(data_trn, for_epoch), lr = lr)
+        snapshots = (snapshot(x) for x in takenth(progress(training), length(data_trn)))
+        intermediate_res = reshape(collect(flatten(snapshots)), (9, :))
         if isempty(results)
             results = intermediate_res
-            else 
-        results = hcat(results, intermediate_res)
+        else
+            results = hcat(results, intermediate_res)
         end
     end
-     
-   
-    if (should_save) 
+
+
+    if (should_save)
         Knet.save(file, "results", results)
     end
     return results
 
+end
+
+# TODO: modify this for our purposes
+function alternative_train!(model, trn, dev, tst...; iteration_count = 1000)
+    bestmodel, bestloss = deepcopy(model), loss(model, dev)
+    progress!(adam(model, trn), steps = iteration_count) do y
+        losses = [loss(model, d) for d in (dev, tst...)]
+        if losses[1] < bestloss
+            bestmodel, bestloss = deepcopy(model), losses[1]
+        end
+        return (losses...,)
+    end
+    return bestmodel
 end
 
 function compute_accuracy_in_training(model, data, accuracy_func)
@@ -57,10 +92,9 @@ function compute_secondary_accuracy_in_training(model, data, data_items, accurac
 end
 
 function compute_error_in_training(model, data, error_func)
-    if error_func !== nothing 
+    if error_func !== nothing
         return error_func(model, data)
     else
-        return 0 
+        return 0
     end
 end
-    

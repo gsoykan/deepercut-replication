@@ -37,3 +37,7 @@ end
 function simple_mae(x, y)
     sum(abs, (x - y)) / size(y)[end]
 end
+
+function simple_mse(x, y)
+    sum(abs2, (x - y)) / size(y)[end]
+end
