@@ -1,8 +1,6 @@
 using (LinearAlgebra)
 include("mpii.annotation.reader.jl")
 
-
-
 #=
 function headSize = util_get_head_size(rect)
 SC_BIAS = 0.6; % 0.8*0.75
@@ -100,8 +98,6 @@ function original_pckh(
                 pred = (max_coord[2], max_coord[1])
 
                 pred_f8 = pred .* preprocess_stride .+ 0.5 * preprocess_stride
-
-                # TODO: Let's check if coords are on same cartesian
 
                 if offmat != nothing
                     dx = offmat[:, :, 2*j-1, idx][max_coord] * global_locref_stdev

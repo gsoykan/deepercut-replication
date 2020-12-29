@@ -210,7 +210,7 @@ struct BatchNormLayer
     w::Any
     ms::Any
 
-    function BatchNormLayer(pre_w, pre_ms)
+    function BatchNormLayer(pre_w, pre_ms; freeze=false)
         res_mean = popfirst!(pre_ms)
         # Trick to arrange variance value for new(er) batchnorm
         res_variance = popfirst!(pre_ms) .^ 2 .- 1e-5
@@ -221,8 +221,12 @@ struct BatchNormLayer
         w1 = vec(w1)
         w2 = vec(w2)
         w = vcat(w1, w2)
-        param_w = param(w, atype = Knet.atype())
-        return new(param_w, ms)
+        if freeze
+            return new(w, ms)
+        else
+            param_w = param(w, atype = Knet.atype())
+            return new(param_w, ms)
+        end
     end
 
 end
@@ -251,8 +255,9 @@ function ResLayerX1_50(
     pool_window_size = 3,
     pool_stride = 2,
     pool_padding = 1,
+        freeze_batchnorm=true
 )
-    bnl = BatchNormLayer(w[3:4], ms)
+    bnl = BatchNormLayer(w[3:4], ms;freeze = freeze_batchnorm)
     return ResLayerX1_50(
         bnl,
         param(w[1]; atype = Knet.atype()),
@@ -290,8 +295,8 @@ struct ResLayerX0
 end
 # Predetermined weights
 # TODO: should we try to make bnl params??
-function ResLayerX0(w, ms; padding = 0, stride = 1, dilation = 1)
-    bnl = BatchNormLayer(w[2:3], ms)
+function ResLayerX0(w, ms; padding = 0, stride = 1, dilation = 1, freeze_batchnorm=true)
+    bnl = BatchNormLayer(w[2:3], ms; freeze=freeze_batchnorm)
     return ResLayerX0(bnl, param(w[1]; atype = Knet.atype()), padding, stride, dilation)
 end
 

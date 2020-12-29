@@ -5,7 +5,7 @@ include("mpii.annotation.parser.jl")
 function get_mpii_batches_and_data_items(batch_size; should_shuffle = false)
     dataset = read_cropped_mpii_annotations(; should_shuffle = should_shuffle)
     dtrn = []
-    step_size = 128
+    step_size = 1024
 
     for i = 1:step_size:(train_image_count+1-step_size)
         println(i)

@@ -1,3 +1,4 @@
+import CUDA
 using Knet
 
 function compute_loss_for_sets(model, named_x_y_tuples)
@@ -40,4 +41,10 @@ end
 
 function simple_mse(x, y)
     sum(abs2, (x - y)) / size(y)[end]
+end
+
+function clear_gpu_memory()
+    CUDA.reclaim()
+    CUDA.memory_status()
+    GC.gc(true)
 end
