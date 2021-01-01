@@ -2,14 +2,14 @@ using Knet
 include("../helper.jl")
 include("mpii.annotation.parser.jl")
 
-function get_mpii_batches_and_data_items(batch_size; should_shuffle = false)
+function get_mpii_batches_and_data_items(batch_size; should_shuffle = false, should_use_pmap = true)
     dataset = read_cropped_mpii_annotations(; should_shuffle = should_shuffle)
     dtrn = []
     step_size = 1024
 
     for i = 1:step_size:(train_image_count+1-step_size)
         println(i)
-        train_dataset = get_from_dataset(dataset, i, i + step_size - 1)
+        train_dataset = get_from_dataset(dataset, i, i + step_size - 1; should_use_pmap = should_use_pmap)
         if isempty(train_dataset)
             println("continued")
             continue
@@ -27,13 +27,13 @@ function get_mpii_batches_and_data_items(batch_size; should_shuffle = false)
         train_preprocessed = 0
         GC.gc(true)
     end
-
-    # TODO: There might be small intersection between validation and train data
-
+    
+    # TODO: Preparing Validation Data
     validation_dataset = get_from_dataset(
         dataset,
         train_image_count + 1,
-        train_image_count + validation_image_count,
+        train_image_count + validation_image_count;
+        should_use_pmap = should_use_pmap
     )
     validation_preprocessed = preprocess_dataset(validation_dataset)
     dval = get_batch(batch_size, validation_preprocessed; shuffle_in_minibatch = false)
@@ -41,11 +41,26 @@ function get_mpii_batches_and_data_items(batch_size; should_shuffle = false)
     validation_dataset = 0
     validation_preprocessed = 0
     GC.gc(true)
+    
+    # Preparing Test Data
+    test_dataset = get_from_dataset(
+        dataset,
+        train_image_count + validation_image_count + 1,
+        train_image_count + validation_image_count + test_image_count;
+        should_use_pmap = should_use_pmap
+    )
+    test_preprocessed = preprocess_dataset(test_dataset)
+    dtst = get_batch(batch_size, test_preprocessed; shuffle_in_minibatch = false)
 
-    data_items = get_from_dataset(dataset, 1, train_image_count + validation_image_count)
+    test_dataset = 0
+    test_preprocessed = 0
+    GC.gc(true)
+
+    # TODO: this might be redundant after all
+    data_items = get_from_dataset(dataset, 1, train_image_count + validation_image_count + test_image_count; should_use_pmap = should_use_pmap)
     data_items = map(d_i -> DataItem(d_i, read_image_h, read_image_w), data_items)
 
-    return (dtrn, dval, data_items)
+    return (dtrn, dval, dtst, data_items)
 end
 
 function get_batch(

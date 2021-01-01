@@ -62,16 +62,19 @@ global_num_joints = 14
 # Total image count => 28883
 # multi-person image count => 9698
 # single-person image count => 19185 ( 17440 - 1744 )
-validation_image_count = 64 #28883 - 25600
+test_image_count = 1000
+validation_image_count = 64 #28883 - 25600 - 1000
 train_image_count =  1024 # 25600
 read_image_w = 128
 read_image_h = 128
-max_image_number_to_read = validation_image_count + train_image_count
+max_image_number_to_read = validation_image_count + train_image_count + test_image_count
 
 global_scale = 0.8452830189
 preprocess_stride = 8
 pos_dist_thresh = 17
-output_consider_threshold = 0.05
+
+# TODO: output consider threshold might not be needed from now on
+output_consider_threshold = 0.0
 # TODO: learn how this was computed 
 global_locref_stdev = 7.2801
 locref_loss_weight = 0.05
@@ -147,19 +150,7 @@ function find_image_idx_in_single_multi_meta(image_name, single_paths, multi_pat
     return reshape([is_single, annorect], (1 ,2))
 end
 
-# TODO: add is_single and annorect here
-function get_from_dataset(dataset, initial_index=1, last_index=max_image_number_to_read)   
-    sizes = dataset["size"][initial_index: last_index]
-    images = dataset["image"][initial_index: last_index]
-    joints = dataset["joints"][initial_index: last_index]
-    is_singles = dataset["is_single"][initial_index: last_index]
-    annorects = dataset["annorect"][initial_index: last_index]
-    data_items = pmap(raw_data_to_data_item, enumerate(zip(images, sizes, joints, is_singles, annorects)))
-    return data_items
-end
-
 function raw_data_to_data_item(indexed_raw_data) 
-   
     i = indexed_raw_data[1]
     img_path = indexed_raw_data[2][1]
     img_size = indexed_raw_data[2][2]
@@ -171,6 +162,20 @@ function raw_data_to_data_item(indexed_raw_data)
     end
     is_single = indexed_raw_data[2][4]
     annorect = indexed_raw_data[2][5]
-    
     return DataItem(i, img_path, img_size, joints_data, is_single, annorect)
 end
+
+function get_from_dataset(dataset, initial_index=1, last_index=max_image_number_to_read; should_use_pmap = true)   
+    sizes = dataset["size"][initial_index: last_index]
+    images = dataset["image"][initial_index: last_index]
+    joints = dataset["joints"][initial_index: last_index]
+    is_singles = dataset["is_single"][initial_index: last_index]
+    annorects = dataset["annorect"][initial_index: last_index]
+    if should_use_pmap
+            data_items = pmap(raw_data_to_data_item, enumerate(zip(images, sizes, joints, is_singles, annorects)))
+    else
+            data_items = map(raw_data_to_data_item, enumerate(zip(images, sizes, joints, is_singles, annorects)))
+    end
+    return data_items
+end
+

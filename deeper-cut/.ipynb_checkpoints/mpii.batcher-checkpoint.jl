@@ -27,9 +27,8 @@ function get_mpii_batches_and_data_items(batch_size; should_shuffle = false)
         train_preprocessed = 0
         GC.gc(true)
     end
-
-    # TODO: There might be small intersection between validation and train data
-
+    
+    # TODO: Preparing Validation Data
     validation_dataset = get_from_dataset(
         dataset,
         train_image_count + 1,
@@ -41,11 +40,24 @@ function get_mpii_batches_and_data_items(batch_size; should_shuffle = false)
     validation_dataset = 0
     validation_preprocessed = 0
     GC.gc(true)
+    
+    # Preparing Test Data
+    test_dataset = get_from_dataset(
+        dataset,
+        train_image_count + validation_image_count + 1,
+        train_image_count + validation_image_count + test_image_count,
+    )
+    test_preprocessed = preprocess_dataset(test_dataset)
+    dtst = get_batch(batch_size, test_preprocessed; shuffle_in_minibatch = false)
 
-    data_items = get_from_dataset(dataset, 1, train_image_count + validation_image_count)
+    test_dataset = 0
+    test_preprocessed = 0
+    GC.gc(true)
+
+    data_items = get_from_dataset(dataset, 1, train_image_count + validation_image_count + test_image_count)
     data_items = map(d_i -> DataItem(d_i, read_image_h, read_image_w), data_items)
 
-    return (dtrn, dval, data_items)
+    return (dtrn, dval, dtst, data_items)
 end
 
 function get_batch(

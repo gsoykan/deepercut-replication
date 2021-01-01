@@ -83,44 +83,96 @@ img_v = @view converted_img[:, 38:75 , 112:177] # blue;
 fill!(img_v, 0) # b;
 =#
 
+function fetch_loc_reffed_max_point(scmap, joint_id )
+  offmat = scmap[:, :, global_num_joints+1:global_num_joints*3]
+            max_coord = argmax(scmap[:,:, joint_id])
+            pred = (max_coord[2], max_coord[1])
+            pred_f8 = pred .* preprocess_stride .+ 0.5 * preprocess_stride
+            dx = offmat[:, :, 2*joint_id-1][max_coord] * global_locref_stdev 
+            dy = offmat[:, :, 2*joint_id][max_coord] * global_locref_stdev
+            pred_f8 = (pred_f8[1] + dx, pred_f8[2] + dy)
+            pred_f8 = CartesianIndex(pred_f8[2] |> round |> Int , pred_f8[1] |> round |> Int)
+    return pred_f8
+end
+
 function show_scmap_on_image(
     image,
     scmap;
     should_display = false,
     should_use_scmap_size = true,
     display_name = nothing,
-        confidence_threshold = 0
+        confidence_threshold = 0,
+        focus_on_argmax = false,
+        add_loc_ref_offset = false,
+        return_single_image = false
 )
     scmap = sigm.(scmap)
     colored_images = []
     size_h = should_use_scmap_size ? size(scmap)[1] : size(image)[1]
     size_w = should_use_scmap_size ? size(scmap)[2] : size(image)[2]
     output_sized_image = imresize(image, size_h, size_w)
+    perm = permutedims(output_sized_image, [3, 1, 2])
         
       all_joints = [[1, 6], [2, 5], [3, 4], [7, 12], [8, 11], [9, 10], [13], [14]]
         for (joint_group) in all_joints
             for joint_id in joint_group
         
-        scmap_slice = scmap[:,:, joint_id]
+        scmap_slice = Array(scmap[:,:, joint_id])
         scmap_slice = imresize(scmap_slice, size_h, size_w)
-        perm = permutedims(output_sized_image, [3, 1, 2])
-                
-        color_idx = findall(scmap_slice .> confidence_threshold)
         
+        if focus_on_argmax != true
+            color_idx = findall(scmap_slice .> confidence_threshold)
+        elseif add_loc_ref_offset && !should_use_scmap_size
+           pred_f8 =  fetch_loc_reffed_max_point(scmap, joint_id)
+            color_idx = create_indexes_around_center(pred_f8, size_h)
+        else
+            max_point = argmax(scmap_slice)
+            color_idx = create_indexes_around_center(max_point, size_h)
+        end
+                    
         img_r = @view perm[1, color_idx]
         img_g = @view perm[2, color_idx]
         img_b = @view perm[3, color_idx] 
         
         fill!(img_r, (joint_id + 4) / (global_num_joints + 4) * 1.2)
-        fill!(img_b, 1.4 - ( (joint_id + 4) / (global_num_joints + 4) * 1.4) )
+        fill!(img_b, 1.4 - ( (joint_id + 4) / (global_num_joints + 4) * 1.4))
         fill!(img_g, (joint_id + 4) / (global_num_joints + 4) * 1)
         
-        colored = colorview(RGB, perm)
-        push!(colored_images, colored)
+            if !return_single_image
+                colored = colorview(RGB, perm)
+                push!(colored_images, colored)
+                perm = permutedims(output_sized_image, [3, 1, 2])
+            end
+        
     end
     end
     
-   return colored_images
+   return return_single_image ? colorview(RGB, perm) : colored_images
+end
+
+function create_indexes_around_center(center_point, array_max_dim_size; distance = 10)    
+    initial_x = center_point[1]
+    initial_y = center_point[2]    
+    
+    top_x = initial_x + distance
+    bottom_x = initial_x - distance
+    top_y = initial_y + distance
+    bottom_y = initial_y - distance
+            
+    p1 = (top_x, top_y)
+    p2 = (top_x, bottom_y)
+    p3 = (bottom_x, top_y)
+    p4 = (bottom_x, bottom_y)
+            
+    candidates = [p1, p2, p3, p4]
+            
+    filtered_candidates = filter(e -> !(true in (e .< 1)) && !(true in (e .> array_max_dim_size)) , candidates)
+            
+    if filtered_candidates |> length == 4
+        return CartesianIndices((bottom_x:top_x, bottom_y:top_y))
+    else
+        return CartesianIndices((initial_x:initial_x, initial_y:initial_y))
+    end
 end
 
 function draw_score_maps(y)

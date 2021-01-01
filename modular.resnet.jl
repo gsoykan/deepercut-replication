@@ -54,11 +54,12 @@ end
 function generate_headless_resnet_from_weights(w, ms)
     conv1 = ResLayerX1(w[1:3], ms; padding = 3, stride = 2, is_initial = true)
     r2 = ResLayerX5(w[4:33], ms; strides = [1, 1, 1, 1])
-    r3 = ResLayerX5(w[34:108], ms)
+    r3 = ResLayerX5(w[34:108], ms; tag = 3, is_conv3_for_deepercut = true)
     r4 = ResLayerX5(w[109:435], ms)
     r5 = ResLayerX5(
         w[436:465],
         ms;
+        tag = 5,
         strides = [1, 1, 1, 1],
         b_layer_dilations = [1, 2, 1],
         b_layer_pads = [0, 2, 0],

@@ -1,5 +1,5 @@
 function trainresults(
-    file,
+    save_tag,
     model,
     data_trn,
     data_tst,
@@ -11,36 +11,38 @@ function trainresults(
     secondary_accuracy_func,
     data_items_trn,
     data_items_val,
+    check_loss = true
 )
     GC.gc(true)
     epoch_count = 0
     # TODO: we can make better use of it no need to run forward pass multiple times
     function snapshot(i)
 
-        trn_loss = model(data_trn)
-        tst_loss = model(data_trn)
+        trn_loss = check_loss ? model(data_trn) : 0
+        tst_loss = check_loss ? model(data_trn) : 0
 
         naive_trn_accuracy = compute_accuracy_in_training(model, data_trn, accuracy_func)
         naive_tst_accuracy = compute_accuracy_in_training(model, data_tst, accuracy_func)
 
-        pck_trn_accuracy, pck_trn_distribution = data_items_trn == nothing ? (0, 0) :
+        pck_trn_accuracy, pck_trn_distribution =
+            data_items_trn == nothing ? (0, 0) :
             compute_secondary_accuracy_in_training(
                 model,
                 data_trn,
                 data_items_trn,
                 secondary_accuracy_func,
             )
-        
+
         pck_val_accuracy, pck_val_distribution = compute_secondary_accuracy_in_training(
             model,
             data_tst,
             data_items_val,
             secondary_accuracy_func,
         )
-        
+
         pck_val_distribution = read_accuracy_results(pck_val_distribution)
 
-        open("29-12-20-training_snapshots.txt", "a") do io
+        open("$(save_tag)-training_snapshots.txt", "a") do io
             write(io, "***** epoch: $(epoch_count) ***** \n")
             write(io, "trn_loss: $(trn_loss) \n")
             write(io, "tst_loss: $(tst_loss) \n")
@@ -49,13 +51,13 @@ function trainresults(
             write(io, "pck_val_accuracy: $(pck_val_accuracy)  \n")
             write(io, "$(pck_val_distribution)")
             write(io, "\n")
-            end
+        end
 
         epoch_count += 1
 
-        Knet.save("29-12-20-training_model.jld2", "29-12-20-training_model", model)
+        Knet.save("$(save_tag)-training_model.jld2", "$(save_tag)-training_model", model)
 
-        snap_res =  (
+        snap_res = (
             0,
             trn_loss,
             tst_loss,
@@ -75,22 +77,21 @@ function trainresults(
     results = []
     for (lr, for_epoch) in learning_rate_per_epoch
         training = optimizer(model, ncycle(data_trn, for_epoch), lr = lr)
-        
-     #   (snapshot(x) for x in takenth(progress(training), length(data_trn))) |> collect
-        
-        snapshots =  (snapshot(x) for x in takenth(progress(training), length(data_trn)))
+
+        #   (snapshot(x) for x in takenth(progress(training), length(data_trn))) |> collect
+
+        snapshots = (snapshot(x) for x in takenth(progress(training), length(data_trn)))
         intermediate_res = reshape(collect(flatten(snapshots)), (9, :))
         if isempty(results)
             results = intermediate_res
         else
             results = hcat(results, intermediate_res)
         end
-        
+
     end
 
-
     if (should_save)
-        Knet.save(file, "results", results)
+        Knet.save("$(save_tag)_results.jld2", "$(save_tag)_results", results)
     end
     return results
 
