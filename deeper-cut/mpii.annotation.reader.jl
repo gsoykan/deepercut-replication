@@ -65,8 +65,8 @@ global_num_joints = 14
 test_image_count = 1000
 validation_image_count = 64 #28883 - 25600 - 1000
 train_image_count =  1024 # 25600
-read_image_w = 128
-read_image_h = 128
+read_image_w = 512
+read_image_h = 512
 max_image_number_to_read = validation_image_count + train_image_count + test_image_count
 
 global_scale = 0.8452830189
@@ -80,6 +80,7 @@ global_locref_stdev = 7.2801
 locref_loss_weight = 0.05
 PCKh_range=0.5
 whole_dataset_count = 28883
+single_dataset_count = 19185
 
 function read_cropped_mpii_annotations(;should_shuffle=false)
     file = matopen(path_to_processed_mat)

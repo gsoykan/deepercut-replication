@@ -33,15 +33,17 @@ function trainresults(
                 secondary_accuracy_func,
             )
 
-        pck_val_accuracy, pck_val_distribution = compute_secondary_accuracy_in_training(
+        pck_val_accuracy, pck_val_distribution = data_items_val == nothing ?  (0, 0) : compute_secondary_accuracy_in_training(
             model,
             data_tst,
             data_items_val,
             secondary_accuracy_func,
         )
 
-        pck_val_distribution = read_accuracy_results(pck_val_distribution)
-
+        if pck_val_distribution != 0 
+                pck_val_distribution = read_accuracy_results(pck_val_distribution)
+        end
+    
         open("$(save_tag)-training_snapshots.txt", "a") do io
             write(io, "***** epoch: $(epoch_count) ***** \n")
             write(io, "trn_loss: $(trn_loss) \n")

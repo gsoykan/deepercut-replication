@@ -104,7 +104,8 @@ function show_scmap_on_image(
         confidence_threshold = 0,
         focus_on_argmax = false,
         add_loc_ref_offset = false,
-        return_single_image = false
+        return_single_image = false,
+        should_color_scmap = true
 )
     scmap = sigm.(scmap)
     colored_images = []
@@ -113,6 +114,8 @@ function show_scmap_on_image(
     output_sized_image = imresize(image, size_h, size_w)
     perm = permutedims(output_sized_image, [3, 1, 2])
         
+    if should_color_scmap
+    
       all_joints = [[1, 6], [2, 5], [3, 4], [7, 12], [8, 11], [9, 10], [13], [14]]
         for (joint_group) in all_joints
             for joint_id in joint_group
@@ -146,11 +149,12 @@ function show_scmap_on_image(
         
     end
     end
+    end
     
    return return_single_image ? colorview(RGB, perm) : colored_images
 end
 
-function create_indexes_around_center(center_point, array_max_dim_size; distance = 10)    
+function create_indexes_around_center(center_point, array_max_dim_size; distance = 5)    
     initial_x = center_point[1]
     initial_y = center_point[2]    
     

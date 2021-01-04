@@ -2,6 +2,7 @@ import CUDA
 include("models.jl")
 using MAT, OffsetArrays, FFTViews, ArgParse, Images, ImageMagick, Knet
 include("./deeper-cut/loss.jl")
+# TODO: add config here
 
 function get_params(params, atype)
     len = length(params["value"])

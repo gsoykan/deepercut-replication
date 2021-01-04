@@ -153,7 +153,7 @@ function (c::Chain)(x)
     for l in c.layers
         x = l(x)
 
-        if c.deeperCutOption.connect_res3_to_res5
+        if c.deeperCutOption != nothing && c.deeperCutOption.connect_res3_to_res5
             layer_tag = get_object_tag(l)
             if layer_tag == 3
                 connection_from3_to5 = l.conv3_for_deepercut_output(x)
@@ -161,7 +161,7 @@ function (c::Chain)(x)
             end
         end
 
-        if c.deeperCutOption.connect_res3_to_res5
+        if c.deeperCutOption != nothing &&  c.deeperCutOption.connect_res3_to_res5
             layer_tag = get_object_tag(l)
             if layer_tag == "deeper_cut_head"
                 if l.is_loc_ref_enabled == true        

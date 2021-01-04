@@ -41,14 +41,13 @@ function visualize_part_detection_results(
     add_loc_ref_offset = false,
     show_only_predictions = false,
     show_body_skeleton = false,
+        should_color_scmap_for_gt = true
 )
     data_x = Knet.atype()(reshape(data.x[:, visualization_idxs], data.xsize))
     data_y = Knet.atype()(reshape(data.y[:, visualization_idxs], data.ysize))
     output = model(data_x)
     output = Array(output)
-    for idx in 1:length(visualization_idxs)
-        
-        println(idx)
+    for idx in 1:length(visualization_idxs)        
         img = Array(data_x[:, :, :, idx])
         if !show_only_predictions
             gt_scmap = Array(data_y[:, :, :, idx])
@@ -58,6 +57,7 @@ function visualize_part_detection_results(
                 confidence_threshold = 0.5,
                 should_use_scmap_size = false,
                 return_single_image = show_body_skeleton,
+                should_color_scmap = should_color_scmap_for_gt
             )
 
             if (show_body_skeleton)
@@ -107,6 +107,10 @@ function draw_body_skeleton(img, scmap)
         [7, 8],
         [8, 9],
         [9, 10],
+        
+        [3, 9],
+        [4, 10],
+        
         [10, 11],
         [11, 12],
         [13, 14],

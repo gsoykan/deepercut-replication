@@ -1,0 +1,105 @@
+***** epoch: 0 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 1 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 2 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 3 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 4 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 5 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 6 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 7 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 8 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 9 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 10 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 11 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 12 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 13 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
+***** epoch: 14 ***** 
+trn_loss: 0 
+tst_loss: 0 
+naive_trn_accuracy: 0 
+naive_tst_accuracy: 0  
+pck_val_accuracy: 0  
+0
