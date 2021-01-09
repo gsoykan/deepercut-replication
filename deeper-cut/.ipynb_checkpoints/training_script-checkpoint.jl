@@ -12,8 +12,6 @@ include("batch_loading_script.jl")
 # example usage
 # continue_training("29-12-20", "29-12-20-cont", [(0.002, 10), (0.001, 12)])
 
-pre_full_path = "/kuacc/users/gsoykan20/comp541_term_project/deeper-cut/"
-
 function init_training(; save_tag, learning_rate_by_epochs, should_use_pmap = true, check_loss = false)
     dtrn, dval, dtst, trn_data_items, val_data_items, tst_data_items = load_and_save_batches(save_tag; should_use_pmap = should_use_pmap)
 

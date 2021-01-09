@@ -57,7 +57,7 @@ function trainresults(
 
         epoch_count += 1
 
-        Knet.save("$(save_tag)-training_model.jld2", "$(save_tag)-training_model", model)
+        Knet.save("$(pre_full_path)$(save_tag)-training_model.jld2", "$(save_tag)-training_model", model)
 
         snap_res = (
             0,

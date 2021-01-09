@@ -22,32 +22,37 @@ function make_even(x)
     return isodd(x) ?  x + 1 : x
 end
 
-function preprocess_dataset(dataset)
-    max_h = findmax(map(data -> data.size[2], dataset))[1]
-    max_w = findmax(map(data -> data.size[3], dataset))[1]
-    raw_preprocessed = map(element -> preprocess_single_image_features(element, max_h, max_w), dataset)
+function preprocess_dataset(dataset; use_global_scaling = false)
+    #max_h = findmax(map(data -> data.size[2], dataset))[1]
+    #max_w = findmax(map(data -> data.size[3], dataset))[1]
+    raw_preprocessed = map(element -> preprocess_single_image_features(element[2]; use_global_scaling = use_global_scaling, counter = element[1]), enumerate(dataset))
     return raw_preprocessed
 end
 
-function preprocess_single_image_features(img_data, max_h, max_w)
+# TODO: update global scaling for custom iterator 
+function preprocess_single_image_features(img_data; use_global_scaling = false, counter)
+    
+    if counter % 1024 == 1
+        println("preprocessing $(counter)")
+    end
+    
     img_path = img_data.path
     loaded_image = load(img_path)
-   
-    # scaled_max_h = ceil(Int, max_h * global_scale)
-    # scaled_max_w = ceil(Int, max_w * global_scale)
+    
+    if use_global_scaling
+        scale_h = global_scale
+        scale_w = global_scale
+        scales = (scale_h, scale_w)
+        resized_image = imresize(loaded_image, ratio = global_scale)
+    else
+        scaled_max_w = read_image_w
+        scaled_max_h = read_image_h
+        scale_h = convert(Float32, scaled_max_h / img_data.size[3]) 
+        scale_w = convert(Float32,  scaled_max_w / img_data.size[2]) 
+        scales = (scale_h, scale_w)
+        resized_image = imresize(loaded_image, scaled_max_h, scaled_max_w)
+    end   
 
-    # scaled_max_h = make_even(scaled_max_h)
-    # scaled_max_w = make_even(scaled_max_w)
-   
-    # TODO: this might be changed later
-    scaled_max_w = read_image_w
-    scaled_max_h = read_image_h
-
-    scale_h = convert(Float32, scaled_max_h / img_data.size[3]) 
-    scale_w = convert(Float32,  scaled_max_w / img_data.size[2]) 
-    scales = (scale_h, scale_w)
-   
-    resized_image = imresize(loaded_image, scaled_max_h, scaled_max_w)
     arranged_img_data = arrange_img_data(resized_image)
     scaled_img_size = size(arranged_img_data)[1:2]
     sm_size = Int.(ceil.(scaled_img_size ./ (preprocess_stride * 2))) .* 2  
@@ -67,6 +72,10 @@ function preprocess_single_image_features(img_data, max_h, max_w)
     joint_ids = img_data.joints[:, 1]
 
     (scmap, scmap_weights, locref_map, locref_mask) = compute_targets_weights(joint_ids, scaled_joints, sm_size)
+    
+    # TODO: check if this is working or not
+    img_data = DataItem(img_data, scaled_img_size[1], scaled_img_size[2])
+    
     return (img_data, arranged_img_data, scmap, scmap_weights, locref_map, locref_mask)
 end
 
@@ -94,7 +103,6 @@ function compute_targets_weights(joint_ids, coords, size)
     locref_shape = (size..., num_joints * 2)
     locref_mask = zeros(locref_shape)
     locref_map = zeros(locref_shape)
-    
     
     dist_thresh_sq = abs2(dist_thresh)
     

@@ -1,5 +1,6 @@
 using (LinearAlgebra)
 include("mpii.annotation.reader.jl")
+include("variant.data.jl")
 
 #=
 function headSize = util_get_head_size(rect)
@@ -77,7 +78,7 @@ function original_pckh(
     non_existant_joint_counter = 0
 
     for idx = 1:num_elements
-        data_item = data_items[idx]
+        data_item =  isa(data_items, DataItem) ? data_items : data_items[idx]
         visible_joint_ids = data_item.joints[:, 1]
 
         head_corner_one = (data_item.annorect["x1"], data_item.annorect["y1"])
@@ -153,38 +154,65 @@ function modelized_PCKh_sigm(
     results = []
     acc_dist_dict = create_acc_dict()
 
-    original_x_data = Knet.atype()(reshape(data.x, data.xsize))
-    batchsize = data.batchsize
-    total_element_count = size(original_x_data)[4]
-
-    batch_coefficient = floor(total_element_count / batchsize) |> Int
-    total_element_count = batch_coefficient * batchsize
-
-    for i = 1:batchsize:total_element_count
-        datapart = original_x_data[:, :, :, i:i+batchsize-1]
-        dataitem_part = data_items[i:i+batchsize-1]
-
-        output = model(datapart)
-        part_detection_scores = output[:, :, 1:global_num_joints, :]
-        part_detection_probs = Array{Float32}(sigm.(part_detection_scores))
-
-        channel_dim = size(output)[end-1]
-        offmat = nothing
-        if channel_dim >= 3 * global_num_joints
-            offmat = output[:, :, global_num_joints+1:global_num_joints*3, :]
+    if isa(data, VariantData)
+        prev_shuffle_value = data.shuffle
+        data.shuffle = false
+        for (i, (x, ygold)) in enumerate(data)
+            ygold = Array{Float32}(ygold)
+            output = Array{Float32}(model(x))
+            part_detection_scores = output[:, :, 1:global_num_joints, :]
+            part_detection_probs = Array{Float32}(sigm.(part_detection_scores))
+            channel_dim = size(output)[end-1]
+            offmat = nothing
+            if channel_dim >= 3 * global_num_joints
+                offmat = output[:, :, global_num_joints+1:global_num_joints*3, :]
+            end
+            pck, acc_dist_dict = original_pckh(
+                part_detection_probs,
+                data_items[i];
+                h_range = h_range,
+                consider_threshold = consider_threshold,
+                offmat = offmat,
+                person_typed_h_ranged_joint_by_joint_accuracy_dict = acc_dist_dict,
+            )
+            push!(results, pck)
         end
+        data.shuffle = prev_shuffle_value
+    else # means KnetData
+        original_x_data = Knet.atype()(reshape(data.x, data.xsize))
+        batchsize = data.batchsize
+        total_element_count = size(original_x_data)[4]
 
-        pck, acc_dist_dict = original_pckh(
-            part_detection_probs,
-            dataitem_part;
-            h_range = h_range,
-            consider_threshold = consider_threshold,
-            offmat = offmat,
-            person_typed_h_ranged_joint_by_joint_accuracy_dict = acc_dist_dict,
-        )
+        batch_coefficient = floor(total_element_count / batchsize) |> Int
+        total_element_count = batch_coefficient * batchsize
 
-        push!(results, pck)
+        for i = 1:batchsize:total_element_count
+            datapart = original_x_data[:, :, :, i:i+batchsize-1]
+            dataitem_part = data_items[i:i+batchsize-1]
+
+            output = model(datapart)
+            part_detection_scores = output[:, :, 1:global_num_joints, :]
+            part_detection_probs = Array{Float32}(sigm.(part_detection_scores))
+
+            channel_dim = size(output)[end-1]
+            offmat = nothing
+            if channel_dim >= 3 * global_num_joints
+                offmat = output[:, :, global_num_joints+1:global_num_joints*3, :]
+            end
+
+            pck, acc_dist_dict = original_pckh(
+                part_detection_probs,
+                dataitem_part;
+                h_range = h_range,
+                consider_threshold = consider_threshold,
+                offmat = offmat,
+                person_typed_h_ranged_joint_by_joint_accuracy_dict = acc_dist_dict,
+            )
+
+            push!(results, pck)
+        end
     end
+
 
     final = sum(results) / length(results)
     final /= 100

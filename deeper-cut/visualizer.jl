@@ -3,6 +3,7 @@ include("../helper.jl")
 include("../models.jl")
 include("loss.jl")
 include("../utils.jl")
+include("variant.data.jl")
 using Images, FileIO, ImageDraw
 using Knet
 
@@ -41,49 +42,97 @@ function visualize_part_detection_results(
     add_loc_ref_offset = false,
     show_only_predictions = false,
     show_body_skeleton = false,
-        should_color_scmap_for_gt = true
+    should_color_scmap_for_gt = true,
 )
-    data_x = Knet.atype()(reshape(data.x[:, visualization_idxs], data.xsize))
-    data_y = Knet.atype()(reshape(data.y[:, visualization_idxs], data.ysize))
-    output = model(data_x)
-    output = Array(output)
-    for idx in 1:length(visualization_idxs)        
-        img = Array(data_x[:, :, :, idx])
-        if !show_only_predictions
-            gt_scmap = Array(data_y[:, :, :, idx])
-            gt_images = show_scmap_on_image(
+
+    if isa(data, VariantData)
+
+        for (i, (x, y_gold)) in enumerate(data)
+            output = Array{Float32}(model(x))
+            img = reduce_dim(Array(x))
+
+            # TODO: you can make below seperate functions
+            if !show_only_predictions
+                gt_scmap = Array(y_gold)
+                gt_images = show_scmap_on_image(
+                    img,
+                    gt_scmap;
+                    confidence_threshold = 0.5,
+                    should_use_scmap_size = false,
+                    return_single_image = show_body_skeleton,
+                    should_color_scmap = should_color_scmap_for_gt,
+                )
+
+                if (show_body_skeleton)
+                    gt_images = draw_body_skeleton(gt_images, gt_scmap)
+                end
+
+                println("****** GROUND TRUTH ******")
+                show_body_skeleton ? display(gt_images) : mosaicify(gt_images)
+            end
+
+            pred_scmap = output[:, :, :, 1]
+            pred_images = show_scmap_on_image(
                 img,
-                gt_scmap;
-                confidence_threshold = 0.5,
+                pred_scmap;
+                confidence_threshold = pred_threshold,
                 should_use_scmap_size = false,
+                focus_on_argmax = focus_on_argmax,
+                add_loc_ref_offset = add_loc_ref_offset,
                 return_single_image = show_body_skeleton,
-                should_color_scmap = should_color_scmap_for_gt
             )
 
             if (show_body_skeleton)
-              gt_images =  draw_body_skeleton(gt_images, gt_scmap)
+                pred_images = draw_body_skeleton(pred_images, pred_scmap)
             end
 
-            println("****** GROUND TRUTH ******")
-           show_body_skeleton ? display(gt_images) : mosaicify(gt_images)
+            println("****** PART PREDICTIONS ******")
+            show_body_skeleton ? display(pred_images) : mosaicify(pred_images)
         end
-        pred_scmap = output[:, :, :, idx]
-        pred_images = show_scmap_on_image(
-            img,
-            pred_scmap;
-            confidence_threshold = pred_threshold,
-            should_use_scmap_size = false,
-            focus_on_argmax = focus_on_argmax,
-            add_loc_ref_offset = add_loc_ref_offset,
-            return_single_image = show_body_skeleton,
-        )
+    else
+        data_x = Knet.atype()(reshape(data.x[:, visualization_idxs], data.xsize))
+        data_y = Knet.atype()(reshape(data.y[:, visualization_idxs], data.ysize))
+        output = model(data_x)
+        output = Array(output)
+        for idx = 1:length(visualization_idxs)
+            img = Array(data_x[:, :, :, idx])
+            if !show_only_predictions
+                gt_scmap = Array(data_y[:, :, :, idx])
+                gt_images = show_scmap_on_image(
+                    img,
+                    gt_scmap;
+                    confidence_threshold = 0.5,
+                    should_use_scmap_size = false,
+                    return_single_image = show_body_skeleton,
+                    should_color_scmap = should_color_scmap_for_gt,
+                )
 
-        if (show_body_skeleton)
-           pred_images = draw_body_skeleton(pred_images, pred_scmap)
+                if (show_body_skeleton)
+                    gt_images = draw_body_skeleton(gt_images, gt_scmap)
+                end
+
+                println("****** GROUND TRUTH ******")
+                show_body_skeleton ? display(gt_images) : mosaicify(gt_images)
+            end
+            pred_scmap = output[:, :, :, idx]
+            pred_images = show_scmap_on_image(
+                img,
+                pred_scmap;
+                confidence_threshold = pred_threshold,
+                should_use_scmap_size = false,
+                focus_on_argmax = focus_on_argmax,
+                add_loc_ref_offset = add_loc_ref_offset,
+                return_single_image = show_body_skeleton,
+            )
+
+            if (show_body_skeleton)
+                pred_images = draw_body_skeleton(pred_images, pred_scmap)
+            end
+
+            println("****** PART PREDICTIONS ******")
+            show_body_skeleton ? display(pred_images) : mosaicify(pred_images)
         end
 
-        println("****** PART PREDICTIONS ******")
-        show_body_skeleton ? display(pred_images) : mosaicify(pred_images)
     end
 end
 
@@ -107,10 +156,8 @@ function draw_body_skeleton(img, scmap)
         [7, 8],
         [8, 9],
         [9, 10],
-        
         [3, 9],
         [4, 10],
-        
         [10, 11],
         [11, 12],
         [13, 14],

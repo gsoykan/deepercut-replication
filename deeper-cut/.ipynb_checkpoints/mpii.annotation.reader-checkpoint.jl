@@ -81,6 +81,11 @@ locref_loss_weight = 0.05
 PCKh_range=0.5
 whole_dataset_count = 28883
 single_dataset_count = 19185
+mean_pixel = [123.68 / 255, 116.779 / 255, 103.939 / 255]
+reshaped_mean_pixel = reshape(mean_pixel, (1, 1, 3, 1));
+
+pre_full_path = "/kuacc/users/gsoykan20/comp541_term_project/deeper-cut/results/"
+
 
 function read_cropped_mpii_annotations(;should_shuffle=false)
     file = matopen(path_to_processed_mat)

@@ -1,5 +1,7 @@
 import CUDA
 using Knet
+using Images
+using Distributed
 
 function compute_loss_for_sets(model, named_x_y_tuples)
     loss_dict = Dict()
@@ -27,7 +29,7 @@ end
 function compute_mae_for_data(model, data)
     sum = 0
     count = 0
-    for (x, y) in data 
+    for (x, y) in data
         current_res = model(x)
         sum += simple_mae(current_res, y)
         count += 1
@@ -47,4 +49,25 @@ function clear_gpu_memory()
     CUDA.reclaim()
     CUDA.memory_status()
     GC.gc(true)
+end
+
+function substract_mean_img_from_data!(data, mean_pixel)
+    step_size = 2000
+    data_length = length(data)
+    for i = 1:step_size:data_length
+        upper_bound = min(i + step_size, data_length)
+        data.x[i:upper_bound] = map(
+            element -> substract_mean_img_from_data_for_element(element, mean_pixel),
+            enumerate(data.x[i:upper_bound]),
+        )
+    end
+end
+
+function substract_mean_img_from_data_for_element(enumerated_img, mean_pixel)
+    x = enumerated_img[2]
+    count = enumerated_img[1]
+    if count % 1024 == 1
+        println(count)
+    end
+    return x .- mean_pixel
 end

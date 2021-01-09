@@ -19,6 +19,7 @@ using Printf, Random, Test, Statistics
 using Plots;
 default(fmt = :png);
 include("utils.jl")
+include("./deeper-cut/variant.data.jl")
 
 # Define Linear Model
 struct Linear
@@ -171,6 +172,9 @@ function (c::Chain)(x)
                         connection_from3_to5_loc_ref;
                         dims = channel_dim,
                     )
+                    println("********")
+                    println(combined_result |> size)
+                    println(x |> size)
                     x = x .+ combined_result
                 else
                     x = x .+ connection_from3_to5
@@ -192,6 +196,7 @@ function (c::Chain)(x, y)
     return loss
 end
 (c::Chain)(d::Data) = mean(c(x, y) for (x, y) in d)
+(c::Chain)(d::VariantData) = mean(c(x, y) for (x, y) in d)
 
 # This became redundant now
 struct ResLayerConv

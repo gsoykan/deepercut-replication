@@ -102,13 +102,13 @@ function generate_headless_resnet50_from_weights(w, ms)
     return Chain(layer1, r2, r3, r4, r5)
 end
 
-function generate_deeper_cut(; should_use_resnet50 = true, is_loc_ref_enabled = false)
+function generate_deeper_cut(; should_use_resnet50 = true, is_loc_ref_enabled = false, connect_res3_to_res5 = true)
     modular_resnet = get_modular_resnet(should_use_resnet50)
     deeper_cut = Chain(
         modular_resnet.layers...,
         DeeperCutHead(; is_loc_ref_enabled = is_loc_ref_enabled);
         loss = deeper_cut_combined_loss,
-        deeperCutOption = DeeperCutOption(; connect_res3_to_res5 = true),
+        deeperCutOption = DeeperCutOption(; connect_res3_to_res5 = connect_res3_to_res5),
     )
     return deeper_cut
 end
