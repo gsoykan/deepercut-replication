@@ -27,19 +27,63 @@ function get_params(params, atype)
     map(wi -> convert(atype, wi), ws), map(mi -> convert(atype, mi), ms)
 end
 
-function get_modular_resnet(should_use_resnet50::Bool)
-    model_file_path =
-        should_use_resnet50 ?
-        "/userfiles/gsoykan20/resnet_pretrained/imagenet-resnet-50-dag.mat" :
-        "/userfiles/gsoykan20/resnet_pretrained/imagenet-resnet-152-dag.mat"
+function get_params_from_deepercut_pretrained(atype)
+    groups_path = "/kuacc/users/gsoykan20/comp541_term_project/deeper-cut/deepercut-weights/test.mat"
+    file = matopen(groups_path)
+    params = read(file, "deepercut_weights")
+    close(file)
 
-    o = Dict(:atype => KnetArray{Float32}, :model => model_file_path, :top => 10)
-    model = matread(abspath(o[:model]))
-    w, ms = get_params(model["params"], o[:atype])
+    len = length(params["value"])
+    ws, ms = [], []
+    for k = 1:len
+        name = params["name"][k]
+        value = convert(Array{Float32}, params["value"][k])
 
-    modular_resnet =
-        should_use_resnet50 ? generate_headless_resnet50_from_weights(w, ms) :
-        generate_headless_resnet_from_weights(w, ms)
+        if endswith(name, "moments")
+            push!(ms, reshape(value[:, 1], (1, 1, size(value, 1), 1)))
+            push!(ms, reshape(value[:, 2], (1, 1, size(value, 1), 1)))
+        elseif endswith(name, "gamma:0_mult") || endswith(name, "beta:0_bias")
+            push!(ws, reshape(value, (1, 1, length(value), 1)))
+        elseif endswith(name, "biases:0_bias")
+            push!(ws, reshape(value, (1, 1, length(value), 1)))
+        else
+            # permuted_value = permutedims( value, [2,1, 3, 4])
+            push!(ws, value)
+        end
+    end
+    map(wi -> convert(atype, wi), ws), map(mi -> convert(atype, mi), ms)
+end
+
+function get_modular_resnet(
+    should_use_resnet50::Bool;
+    should_use_resnet101::Bool = false,
+    use_deepercut_resnet101_pretrained = false,
+)
+    if should_use_resnet101
+        model_file_path = "/userfiles/gsoykan20/resnet_pretrained/imagenet-resnet-101-dag.mat"
+    elseif should_use_resnet50
+        model_file_path = "/userfiles/gsoykan20/resnet_pretrained/imagenet-resnet-50-dag.mat"
+    else
+        model_file_path = "/userfiles/gsoykan20/resnet_pretrained/imagenet-resnet-152-dag.mat"
+    end
+
+    if use_deepercut_resnet101_pretrained
+        w, ms = get_params_from_deepercut_pretrained(KnetArray{Float32})
+    else
+        o = Dict(:atype => KnetArray{Float32}, :model => model_file_path, :top => 10)
+        model = matread(abspath(o[:model]))
+        w, ms = get_params(model["params"], o[:atype])
+    end
+
+    if should_use_resnet101
+        modular_resnet = generate_headless_resnet101_from_weights(w, ms)
+    elseif should_use_resnet50
+        modular_resnet = generate_headless_resnet50_from_weights(w, ms)
+    else
+        modular_resnet = generate_headless_resnet_from_weights(w, ms)
+    end
+
+    return modular_resnet
 end
 
 function generate_resnet_from_weights(w, ms)
@@ -102,11 +146,76 @@ function generate_headless_resnet50_from_weights(w, ms)
     return Chain(layer1, r2, r3, r4, r5)
 end
 
-function generate_deeper_cut(; should_use_resnet50 = true, is_loc_ref_enabled = false, connect_res3_to_res5 = true)
-    modular_resnet = get_modular_resnet(should_use_resnet50)
+function generate_headless_resnet101_from_weights(w, ms)
+    # layer1 = ResLayerX1_50(w[1:4], ms)
+    layer1 = ResLayerX1(w[1:3], ms; padding = 3, stride = 2, is_initial = true)
+    r2 = ResLayerX5(w[4:33], ms; strides = [1, 1, 1, 1])
+    r3 = ResLayerX5(w[34:72], ms; tag = 3, is_conv3_for_deepercut = true)
+    r4 = ResLayerX5(w[73:282], ms)
+    r5 = ResLayerX5(
+        w[283:312],
+        ms;
+        tag = 5,
+        strides = [1, 1, 1, 1],
+        b_layer_dilations = [1, 2, 1],
+        b_layer_pads = [0, 2, 0],
+    )
+    return Chain(layer1, r2, r3, r4, r5)
+end
+
+function generate_deeper_cut(;
+    should_use_resnet101 = false,
+    should_use_resnet50 = true,
+    is_loc_ref_enabled = false,
+    connect_res3_to_res5 = true,
+    use_deepercut_resnet101_pretrained = false,
+)
+    modular_resnet = get_modular_resnet(
+        should_use_resnet50;
+        should_use_resnet101 = should_use_resnet101,
+        use_deepercut_resnet101_pretrained = use_deepercut_resnet101_pretrained,
+    )
+
+    if use_deepercut_resnet101_pretrained
+        head_weights, _ = get_params_from_deepercut_pretrained(KnetArray{Float32})
+        p_d_w = permutedims(head_weights[end-3], [2, 1, 3, 4])
+        p_d_b = head_weights[end-2]
+        l_r_w = permutedims(head_weights[end-1], [2, 1, 3, 4])
+        l_r_b = head_weights[end]
+        deepercut_head = DeeperCutHead(
+             p_d_w,
+             p_d_b,
+             l_r_w,
+            l_r_b;
+            is_loc_ref_enabled = is_loc_ref_enabled,
+        )
+    else
+        deepercut_head = DeeperCutHead(;
+            part_detection_head = Deconv(
+                3,
+                3,
+                global_num_joints,
+                2048;
+                padding = 1,
+                stride = 2,
+                tag = "part_detect_deconv",
+            ),
+            loc_ref_head = Deconv(
+                3,
+                3,
+                global_num_joints * 2,
+                2048;
+                padding = 1,
+                stride = 2,
+                tag = "loc_ref_deconv",
+            ),
+            is_loc_ref_enabled = is_loc_ref_enabled,
+        )
+    end
+
     deeper_cut = Chain(
         modular_resnet.layers...,
-        DeeperCutHead(; is_loc_ref_enabled = is_loc_ref_enabled);
+        deepercut_head;
         loss = deeper_cut_combined_loss,
         deeperCutOption = DeeperCutOption(; connect_res3_to_res5 = connect_res3_to_res5),
     )

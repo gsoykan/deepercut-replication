@@ -1,6 +1,7 @@
 using MAT
 using Distributed
 using Random
+include("deeper-cut.config.jl")
 
 struct DataItem 
     id::Int
@@ -46,46 +47,25 @@ struct DataItem
     end
 end
 
-
-
-# cfg.all_joints = [      [0, 5], [1, 4], [2, 3], [6, 11], [7, 10],  [8, 9],     [12],      [13]]
-# cfg.all_joints_names = ['ankle', 'knee', 'hip', 'wrist', 'elbow', 'shoulder', 'chin', 'forehead']
-# cfg.num_joints = 14
-
-# TODO: add this to config
-path_to_processed_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/dataset.mat"
-path_to_single_person_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/annolist-singlePerson-h400.mat"
-path_to_full_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/annolist-full-h400.mat"
-path_to_multi_person_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/annolist-multPerson-h400.mat"
-global_num_joints = 14
-
-# Total image count => 28883
-# multi-person image count => 9698
-# single-person image count => 19185 ( 17440 - 1744 )
-test_image_count = 1000
-validation_image_count = 64 #28883 - 25600 - 1000
-train_image_count =  1024 # 25600
-read_image_w = 512
-read_image_h = 512
-max_image_number_to_read = validation_image_count + train_image_count + test_image_count
-
-global_scale = 0.8452830189
-preprocess_stride = 8
-pos_dist_thresh = 17
-
-# TODO: output consider threshold might not be needed from now on
-output_consider_threshold = 0.0
-# TODO: learn how this was computed 
-global_locref_stdev = 7.2801
-locref_loss_weight = 0.05
-PCKh_range=0.5
-whole_dataset_count = 28883
-single_dataset_count = 19185
-mean_pixel = [123.68 / 255, 116.779 / 255, 103.939 / 255]
-reshaped_mean_pixel = reshape(mean_pixel, (1, 1, 3, 1));
-
-pre_full_path = "/kuacc/users/gsoykan20/comp541_term_project/deeper-cut/results/"
-
+function mirror_data_item(data_item)
+    id = data_item.id
+    path = data_item.path
+    size = data_item.size
+    image_width = size[3]
+    # mirror joints coords
+    mirrored_joints = deepcopy(data_item.joints)
+    mirrored_joints[:,2] = data_item.size[3] .- data_item.joints[:,2] .|> Int32
+    is_single = data_item.is_single
+    # mirror joint ids 
+    for i in enumerate(mirrored_joints[:, 1])
+       mirrored_joints[i[1], 1] = symmetric_joint_dict[i[2]]
+    end
+    # mirror annorect 
+    annorect = data_item.annorect |> deepcopy
+    annorect["x1"]  =   data_item.size[3] .- data_item.annorect["x1"] 
+    annorect["x2"]  =   data_item.size[3] .- data_item.annorect["x2"] 
+    return DataItem(id, path, size, mirrored_joints, is_single, annorect)
+end
 
 function read_cropped_mpii_annotations(;should_shuffle=false)
     file = matopen(path_to_processed_mat)

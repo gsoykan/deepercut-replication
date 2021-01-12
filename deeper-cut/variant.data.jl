@@ -3,6 +3,7 @@ using Base.Iterators: Cycle
 using Base: @propagate_inbounds, tail
 using Random: randperm
 using Knet: atype
+include("../utils.jl")
 
 mutable struct VariantData{T}
     x::Any
@@ -15,6 +16,7 @@ mutable struct VariantData{T}
     ysize::Any
     xtype::Any
     ytype::Any
+    add_random_mirroring::Bool
 end
 
 function variant_minibatch(
@@ -25,6 +27,7 @@ function variant_minibatch(
     ysize = size(y),
     xtype = (eltype(x) <: AbstractFloat ? atype() : (typeof(x).name.wrapper){eltype(x)}),
     ytype = (eltype(y) <: AbstractFloat ? atype() : (typeof(y).name.wrapper){eltype(y)}),
+    add_random_mirroring = false,
 )
     nx = size(x)[end]
     if nx != size(y)[end]
@@ -43,6 +46,7 @@ function variant_minibatch(
         ysize,
         xtype,
         ytype,
+        add_random_mirroring,
     )
 end
 
@@ -55,12 +59,23 @@ end
     end
     nexti = min(i + 1, d.length)
     id = nexti
-    xbatch =  convert(d.xtype, d.x[id])
-    if d.y == nothing
-        return (xbatch, nexti)
+
+    if d.add_random_mirroring && rand(1:2) == 1
+        xbatch = mirror_raw_batch_item(d.x[id], false, d.xtype)
+        if d.y == nothing
+            return (xbatch, nexti)
+        else
+            ybatch = mirror_raw_batch_item(d.y[id], true, d.ytype)
+            return ((xbatch, ybatch), nexti)
+        end
     else
-        ybatch = convert(d.ytype, d.y[id])
-        return ((xbatch, ybatch), nexti)
+        xbatch = convert(d.xtype, d.x[id])
+        if d.y == nothing
+            return (xbatch, nexti)
+        else
+            ybatch = convert(d.ytype, d.y[id])
+            return ((xbatch, ybatch), nexti)
+        end
     end
 end
 
@@ -78,5 +93,5 @@ end
 
 # Give length info in summary:
 summary(d::VariantData) = "$(length(d))-element $(typeof(d))"
-show(io::IO, d::VariantData) = print(IOContext(io,:compact=>true), summary(d))
+show(io::IO, d::VariantData) = print(IOContext(io, :compact => true), summary(d))
 show(io::IO, ::MIME"text/plain", d::VariantData) = show(io, d)

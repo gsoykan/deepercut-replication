@@ -9,12 +9,13 @@ function get_mpii_single_person_batches_and_data_items(;
     train_size = 18432,
     test_size = 753,
     should_shuffle_dataset = false,
+    fetch_only_test_batch = false,
 )
-    
+
     # TODO: throw error if train + test size is bigger than 19185
     dataset = read_cropped_mpii_annotations(; should_shuffle = false)
     dtrn = []
-    step_size = 32
+    step_size = 1024
     data_items = []
 
     single_person_dataset_length = train_size
@@ -32,51 +33,55 @@ function get_mpii_single_person_batches_and_data_items(;
         end
     end
 
-    if !use_global_scaling
+    if !fetch_only_test_batch
+        if !use_global_scaling
 
-        for i = 1:step_size:single_person_dataset_length
-            println(i)
-            train_dataset =
-                get_from_dataset(dataset, i, i + step_size - 1; should_use_pmap = true)
-            if isempty(train_dataset)
-                println("continued")
-                continue
+            for i = 1:step_size:single_person_dataset_length
+                println(i)
+                train_dataset =
+                    get_from_dataset(dataset, i, i + step_size - 1; should_use_pmap = true)
+                if isempty(train_dataset)
+                    println("continued")
+                    continue
+                end
+                train_preprocessed = preprocess_dataset(
+                    train_dataset;
+                    use_global_scaling = use_global_scaling,
+                )
+
+                dtrn_part = get_batch(batch_size, train_preprocessed)
+                if isempty(dtrn)
+                    dtrn = dtrn_part
+                    println("$(summary(dtrn))")
+                else
+                    append_to_data!(dtrn, dtrn_part)
+                    println("$(summary(dtrn))")
+                end
+
+                push!(data_items, map(e -> e[1], train_preprocessed)...)
+
+                train_dataset = 0
+                train_preprocessed = 0
+                GC.gc(true)
             end
+
+        else
+            train_dataset = get_from_dataset(
+                dataset,
+                1,
+                single_person_dataset_length;
+                should_use_pmap = true,
+            )
             train_preprocessed =
                 preprocess_dataset(train_dataset; use_global_scaling = use_global_scaling)
+            dtrn = get_variant_batch(train_preprocessed)
 
-            dtrn_part = get_batch(batch_size, train_preprocessed)
-            if isempty(dtrn)
-                dtrn = dtrn_part
-                println("$(summary(dtrn))")
-            else
-                append_to_data!(dtrn, dtrn_part)
-                println("$(summary(dtrn))")
-            end
+            push!(data_items, map(e -> e[1], train_preprocessed)...)
 
-            push!(data_items, map(e -> e[1] , train_preprocessed)...)
-            
             train_dataset = 0
             train_preprocessed = 0
             GC.gc(true)
         end
-
-    else
-        train_dataset = get_from_dataset(
-            dataset,
-            1,
-            single_person_dataset_length;
-            should_use_pmap = true,
-        )
-        train_preprocessed =
-            preprocess_dataset(train_dataset; use_global_scaling = use_global_scaling)
-        dtrn = get_variant_batch(train_preprocessed)
-
-        push!(data_items, map(e -> e[1] , train_preprocessed)...)
-        
-          train_dataset = 0
-            train_preprocessed = 0
-            GC.gc(true)
     end
 
     # Preparing Test Data
@@ -89,19 +94,19 @@ function get_mpii_single_person_batches_and_data_items(;
 
     if use_global_scaling
         test_preprocessed =
-                preprocess_dataset(test_dataset; use_global_scaling = use_global_scaling)
+            preprocess_dataset(test_dataset; use_global_scaling = use_global_scaling)
         dtst = get_variant_batch(test_preprocessed; shuffle_in_minibatch = false)
     else
         test_preprocessed = preprocess_dataset(test_dataset)
         dtst = get_batch(batch_size, test_preprocessed; shuffle_in_minibatch = false)
     end
 
-    push!(data_items, map(e -> e[1] , test_preprocessed)...)
-    
+    push!(data_items, map(e -> e[1], test_preprocessed)...)
+
     test_dataset = 0
     test_preprocessed = 0
     GC.gc(true)
-   
+
 
     return (dtrn, dtst, data_items)
 end
@@ -242,10 +247,14 @@ function get_variant_batch(
         ),
         1:total_element_count,
     )
-    return variant_minibatch(x_all, y_all;
+    return variant_minibatch(
+        x_all,
+        y_all;
         shuffle = shuffle_in_minibatch,
-    xtype = Knet.atype(),
-        ytype = Knet.atype())
+        xtype = Knet.atype(),
+        ytype = Knet.atype(),
+        add_random_mirroring = global_add_random_mirroring,
+    )
 end
 
 function merge_different_y(
@@ -256,8 +265,16 @@ function merge_different_y(
     include_scmap_weights = false,
 )
     if include_scmap_weights == true
-        return add_dim(cat(scmap, scmap_w, locref_map, locref_mask; dims = (3)))
+        if use_locref_mask_weights
+            return add_dim(cat(scmap, scmap_w, locref_map, locref_mask; dims = (3)))
+        else
+            return add_dim(cat(scmap, scmap_w, locref_map; dims = (3)))
+        end
     else
-        return add_dim(cat(scmap, locref_map, locref_mask; dims = (3)))
+        if use_locref_mask_weights
+            return add_dim(cat(scmap, locref_map, locref_mask; dims = (3)))
+        else
+            return add_dim(cat(scmap, locref_map; dims = (3)))
+        end
     end
 end

@@ -60,14 +60,22 @@ end
 
 struct Deconv
     w::Any
+    b::Any
     stride::Any
     padding::Any
     tag::String
 end
 Deconv(w1, w2, nx, ny; stride = 1, padding = 0, atype = Knet.atype(), tag = "") =
-    Deconv(param(w1, w2, nx, ny; atype = atype), stride, padding, tag)
+    Deconv(param(w1, w2, nx, ny; atype = atype), param0(1, 1, nx, 1), stride, padding, tag)
 
-(dc::Deconv)(x) = deconv4(dc.w, x; stride = dc.stride, padding = dc.padding)
+Deconv(w, b; stride = 1, padding = 0, atype = Knet.atype(), tag = "") =
+    Deconv(param(w; atype = atype), param(b; atype = atype), stride, padding, tag)
+
+function (dc::Deconv)(x)
+    dc_res = deconv4(dc.w, x; stride = dc.stride, padding = dc.padding)
+    res = dc_res .+ dc.b
+    return res
+end
 
 # Define dense layer:
 struct Dense
@@ -120,6 +128,21 @@ struct DeeperCutHead
     )
         return new(part_detection_head, loc_ref_head, tag, is_loc_ref_enabled)
     end
+
+    function DeeperCutHead(
+        p_d_w,
+        p_d_b,
+        l_r_w,
+        l_r_b;
+        tag = "deeper_cut_head",
+        is_loc_ref_enabled = false,
+    )
+        part_detection_head =
+            Deconv(p_d_w, p_d_b; padding = 1, stride = 2, tag = "part_detect_deconv")
+        loc_ref_head = Deconv(l_r_w, l_r_b; padding = 1, stride = 2, tag = "loc_ref_deconv")
+        return new(part_detection_head, loc_ref_head, tag, is_loc_ref_enabled)
+    end
+
 end
 
 function (deeper_cut_head::DeeperCutHead)(x)
@@ -129,7 +152,7 @@ function (deeper_cut_head::DeeperCutHead)(x)
 
     if deeper_cut_head.is_loc_ref_enabled == true
         loc_ref_result = deeper_cut_head.loc_ref_head(x)
-        channel_dim = (size(part_detection_result) |> length) - 1 
+        channel_dim = (size(part_detection_result) |> length) - 1
         combined_result = cat(part_detection_result, loc_ref_result; dims = channel_dim)
         return combined_result
     else
@@ -162,19 +185,17 @@ function (c::Chain)(x)
             end
         end
 
-        if c.deeperCutOption != nothing &&  c.deeperCutOption.connect_res3_to_res5
+        if c.deeperCutOption != nothing && c.deeperCutOption.connect_res3_to_res5
             layer_tag = get_object_tag(l)
             if layer_tag == "deeper_cut_head"
-                if l.is_loc_ref_enabled == true        
+                if l.is_loc_ref_enabled == true
                     channel_dim = (size(connection_from3_to5) |> length) - 1
                     combined_result = cat(
                         connection_from3_to5,
                         connection_from3_to5_loc_ref;
                         dims = channel_dim,
                     )
-                    println("********")
-                    println(combined_result |> size)
-                    println(x |> size)
+                    # TODO: This introduces problems when the dimensions are odd
                     x = x .+ combined_result
                 else
                     x = x .+ connection_from3_to5
@@ -215,7 +236,7 @@ struct BatchNormLayer
     w::Any
     ms::Any
 
-    function BatchNormLayer(pre_w, pre_ms; freeze=false)
+    function BatchNormLayer(pre_w, pre_ms; freeze = false)
         res_mean = popfirst!(pre_ms)
         # Trick to arrange variance value for new(er) batchnorm
         res_variance = popfirst!(pre_ms) .^ 2 .- 1e-5
@@ -260,9 +281,9 @@ function ResLayerX1_50(
     pool_window_size = 3,
     pool_stride = 2,
     pool_padding = 1,
-        freeze_batchnorm=true
+    freeze_batchnorm = true,
 )
-    bnl = BatchNormLayer(w[3:4], ms;freeze = freeze_batchnorm)
+    bnl = BatchNormLayer(w[3:4], ms; freeze = freeze_batchnorm)
     return ResLayerX1_50(
         bnl,
         param(w[1]; atype = Knet.atype()),
@@ -300,8 +321,8 @@ struct ResLayerX0
 end
 # Predetermined weights
 # TODO: should we try to make bnl params??
-function ResLayerX0(w, ms; padding = 0, stride = 1, dilation = 1, freeze_batchnorm=true)
-    bnl = BatchNormLayer(w[2:3], ms; freeze=freeze_batchnorm)
+function ResLayerX0(w, ms; padding = 0, stride = 1, dilation = 1, freeze_batchnorm = true)
+    bnl = BatchNormLayer(w[2:3], ms; freeze = freeze_batchnorm)
     return ResLayerX0(bnl, param(w[1]; atype = Knet.atype()), padding, stride, dilation)
 end
 
@@ -331,7 +352,7 @@ ResLayerX1(w, ms; padding = 0, stride = 1, is_initial::Bool = false, dilation = 
 function (rlx1::ResLayerX1)(x)
     relu_res = relu.(rlx1.x0_layer(x))
     if rlx1.is_initial
-        return pool(relu_res; window = 3, stride = 2)
+        return pool(relu_res; window = 3, stride = 2, padding = 1)
     else
         return relu_res
     end
@@ -444,7 +465,7 @@ function ResLayerX5(
         conv3_for_deepercut_output =
             Conv2(1, 1, 512, global_num_joints, identity; is_pool_enabled = false)
         conv3_for_deepercut_output_loc_ref =
-            Conv2(1, 1, 512, global_num_joints*4, identity; is_pool_enabled = false)
+            Conv2(1, 1, 512, global_num_joints * 4, identity; is_pool_enabled = false)
     end
 
     return ResLayerX5(

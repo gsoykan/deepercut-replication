@@ -44,7 +44,7 @@ function trainresults(
                 pck_val_distribution = read_accuracy_results(pck_val_distribution)
         end
     
-        open("$(save_tag)-training_snapshots.txt", "a") do io
+        open("$(pre_full_path)$(save_tag)-training_snapshots.txt", "a") do io
             write(io, "***** epoch: $(epoch_count) ***** \n")
             write(io, "trn_loss: $(trn_loss) \n")
             write(io, "tst_loss: $(tst_loss) \n")
