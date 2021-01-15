@@ -36,8 +36,12 @@ read_image_h = 512
 max_image_number_to_read = validation_image_count + train_image_count + test_image_count
 
 global_scale = 0.8452830189
+scale_jitter_interval = [0.85, 1.15]
 preprocess_stride = 8
 pos_dist_thresh = 17
+
+weight_decay = 0.0001
+momentum_gamma = 0.9
 
 # TODO: output consider threshold might not be needed from now on
 output_consider_threshold = 0.0
@@ -49,7 +53,11 @@ whole_dataset_count = 28883
 single_dataset_count = 19185
 mean_pixel = [123.68 / 255, 116.779 / 255, 103.939 / 255]
 reshaped_mean_pixel = reshape(mean_pixel, (1, 1, 3, 1));
+
+mean_pixel_255 = [123.68, 116.779, 103.939]
+reshaped_mean_pixel_255 = reshape(mean_pixel_255, (1, 1, 3, 1));
+
 use_locref_mask_weights = false
-global_add_random_mirroring = true
+global_add_random_mirroring = false
 
 pre_full_path = "/kuacc/users/gsoykan20/comp541_term_project/deeper-cut/results/"

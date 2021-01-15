@@ -1,10 +1,10 @@
+using Knet
 # https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits
 
 function deeper_cut_combined_loss(scores, labels)
     part_detection_labels = labels[:, :, 1:global_num_joints, :]
     part_detection_scores = scores[:, :, 1:global_num_joints, :]
-    part_detection_loss =
-        sigmoid_cross_entropy_loss(part_detection_scores, part_detection_labels)
+    part_detection_loss = sigmoid_cross_entropy_loss(part_detection_scores, part_detection_labels)
 
     score_channel_size = (scores|>size)[end-1]
     loc_ref_loss = 0
@@ -22,6 +22,10 @@ function deeper_cut_combined_loss(scores, labels)
             huber_loss(loc_ref_scores, loc_ref_labels; weights = loc_ref_scores_weights)
 
         loc_ref_loss = loc_ref_loss + loc_ref_weight_loss
+    elseif score_channel_size == global_num_joints * 3
+        loc_ref_labels = labels[:, :, global_num_joints+1:global_num_joints*3, :]
+        loc_ref_scores = scores[:, :, global_num_joints+1:global_num_joints*3, :]
+        loc_ref_loss = huber_loss(loc_ref_scores, loc_ref_labels)
     end
 
     return part_detection_loss + locref_loss_weight * loc_ref_loss
@@ -32,7 +36,7 @@ function sigmoid_cross_entropy_loss(scores, labels)
     #   mask = Knet.atype()(zeros(Float32, size(labels)))
     #  mask[:, :, 1:14 ,:] .= 1
     # scores = scores .* mask
-    # labels .* mask
+    # labels .* mask  
     l = max.(0, scores) .- labels .* scores .+ log.(1 .+ exp.(-abs.(scores)))
     (sum(l) / length(l))
 end
@@ -44,7 +48,7 @@ function huber_loss(scores, labels; weights = 1, beta = 1)
     high_idx = findall(cpu_diff .>= beta)
 
     # TODO: put weights into sigmoids
-    sigmoided_weights = sigm.(weights)
+    sigmoided_weights = weights == 1 ? Knet.atype()(ones(size(scores))) : sigm.(weights)
 
     loss_sum = sum((diff[high_idx] .- 0.5 .* beta^2) .* sigmoided_weights[high_idx])
     loss_sum += sum((0.5 .* (diff[low_idx] .^ 2) .* sigmoided_weights[low_idx]))

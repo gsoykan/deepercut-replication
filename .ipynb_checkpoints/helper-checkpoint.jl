@@ -1,5 +1,6 @@
 using Knet
 using Images
+using ImageDraw
 
 add_dim(x::Array) = reshape(x, (size(x)..., 1));
 
@@ -83,15 +84,24 @@ img_v = @view converted_img[:, 38:75 , 112:177] # blue;
 fill!(img_v, 0) # b;
 =#
 
-function fetch_loc_reffed_max_point(scmap, joint_id )
+function fetch_loc_reffed_max_point(scmap, joint_id, add_loc_ref)
   offmat = scmap[:, :, global_num_joints+1:global_num_joints*3]
             max_coord = argmax(scmap[:,:, joint_id])
-            pred = (max_coord[2], max_coord[1])
-            pred_f8 = pred .* preprocess_stride .+ 0.5 * preprocess_stride
+            pred = (max_coord[1], max_coord[2])
+            pred_f8 = pred .* preprocess_stride .+ (0.5 * preprocess_stride)
+            # TODO: ORIGINAL Be careful about here
             dx = offmat[:, :, 2*joint_id-1][max_coord] * global_locref_stdev 
-            dy = offmat[:, :, 2*joint_id][max_coord] * global_locref_stdev
-            pred_f8 = (pred_f8[1] + dx, pred_f8[2] + dy)
-            pred_f8 = CartesianIndex(pred_f8[2] |> round |> Int , pred_f8[1] |> round |> Int)
+            dy = offmat[:, :, 2*joint_id][max_coord] * global_locref_stdev 
+    
+            # println("***")
+            #println(pred_f8)
+            if add_loc_ref
+                 pred_f8 = (pred_f8[1] + dx, pred_f8[2] + dy)        
+            end
+            
+          #  println(" after $(pred_f8)")
+           # println("dx: $(dx) , dy: $(dy)")
+            pred_f8 = CartesianIndex(pred_f8[1] |> round |> Int , pred_f8[2] |> round |> Int)
     return pred_f8
 end
 
@@ -105,13 +115,20 @@ function show_scmap_on_image(
         focus_on_argmax = false,
         add_loc_ref_offset = false,
         return_single_image = false,
-        should_color_scmap = true
+        should_color_scmap = true,
+        use_sigm = true
 )
-    scmap = sigm.(scmap)
+    if use_sigm
+        scmap = sigm.(scmap)
+    end
+    
     colored_images = []
-    size_h = should_use_scmap_size ? size(scmap)[1] : size(image)[1]
-    size_w = should_use_scmap_size ? size(scmap)[2] : size(image)[2]
-    output_sized_image = imresize(image, size_h, size_w)
+    #size_h = should_use_scmap_size ? size(scmap)[1] : size(image)[1]
+   # size_w = should_use_scmap_size ? size(scmap)[2] : size(image)[2]
+  #  output_sized_image = imresize(image, size_h, size_w)
+      size_h = size(image)[1]
+    size_w = size(image)[2]
+   output_sized_image = image
     perm = permutedims(output_sized_image, [3, 1, 2])
         
     if should_color_scmap
@@ -121,17 +138,21 @@ function show_scmap_on_image(
             for joint_id in joint_group
         
         scmap_slice = Array(scmap[:,:, joint_id])
-        scmap_slice = imresize(scmap_slice, size_h, size_w)
+        # scmap_slice = imresize(scmap_slice, size_h, size_w)
         
+                #=
         if focus_on_argmax != true
             color_idx = findall(scmap_slice .> confidence_threshold)
-        elseif add_loc_ref_offset && !should_use_scmap_size
-           pred_f8 =  fetch_loc_reffed_max_point(scmap, joint_id)
-            color_idx = create_indexes_around_center(pred_f8, size_h)
+        elseif add_loc_ref_offset # && !should_use_scmap_size
+           pred_f8 =  fetch_loc_reffed_max_point(scmap, joint_id)          
+            color_idx = create_indexes_around_center(pred_f8, size_w)
         else
             max_point = argmax(scmap_slice)
-            color_idx = create_indexes_around_center(max_point, size_h)
+            color_idx = create_indexes_around_center(max_point, max(size_h, size_w))
         end
+                =#
+        pred_f8 =  fetch_loc_reffed_max_point(scmap, joint_id, add_loc_ref_offset)          
+        color_idx = create_indexes_around_center(pred_f8,  max(size_h, size_w))
                     
         img_r = @view perm[1, color_idx]
         img_g = @view perm[2, color_idx]
@@ -141,6 +162,8 @@ function show_scmap_on_image(
         fill!(img_b, 1.4 - ( (joint_id + 4) / (global_num_joints + 4) * 1.4))
         fill!(img_g, (joint_id + 4) / (global_num_joints + 4) * 1)
         
+        #fill!(img_r, 1)
+                
             if !return_single_image
                 colored = colorview(RGB, perm)
                 push!(colored_images, colored)

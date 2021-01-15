@@ -58,7 +58,7 @@ end
         d.indices = randperm(d.length)
     end
     nexti = min(i + 1, d.length)
-    id = nexti
+    id = d.indices[nexti]
 
     if d.add_random_mirroring && rand(1:2) == 1
         xbatch = mirror_raw_batch_item(d.x[id], false, d.xtype)

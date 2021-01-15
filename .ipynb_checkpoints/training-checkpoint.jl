@@ -1,10 +1,12 @@
+include("./deeper-cut/deeper-cut.config.jl")
+
 function trainresults(
     save_tag,
     model,
     data_trn,
     data_tst,
     learning_rate_per_epoch,
-    optimizer = sgd,
+    optimizer = momentum,
     should_save = false;
     accuracy_func = accuracy,
     error_func,
@@ -78,7 +80,9 @@ function trainresults(
 
     results = []
     for (lr, for_epoch) in learning_rate_per_epoch
-        training = optimizer(model, ncycle(data_trn, for_epoch), lr = lr)
+                
+        training = optimizer(model, ncycle(data_trn, for_epoch), lr = lr, 
+            gamma = momentum_gamma)
 
         #   (snapshot(x) for x in takenth(progress(training), length(data_trn))) |> collect
 

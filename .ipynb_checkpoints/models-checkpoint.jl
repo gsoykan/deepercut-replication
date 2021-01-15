@@ -58,6 +58,7 @@ function (c::Conv2)(x)
     end
 end
 
+# Deconv
 struct Deconv
     w::Any
     b::Any
@@ -75,6 +76,10 @@ function (dc::Deconv)(x)
     dc_res = deconv4(dc.w, x; stride = dc.stride, padding = dc.padding)
     res = dc_res .+ dc.b
     return res
+end
+
+function get_weights_sum(l::Deconv)
+    return sum(abs2, l.w)
 end
 
 # Define dense layer:
@@ -98,6 +103,7 @@ struct DeeperCutOption
     end
 end
 
+# Deeper Cut Head
 struct DeeperCutHead
     part_detection_head::Deconv
     loc_ref_head::Deconv
@@ -160,6 +166,14 @@ function (deeper_cut_head::DeeperCutHead)(x)
     end
 end
 
+function get_weights_sum(l::DeeperCutHead)
+    # sum(abs2, l.w)
+    sum1 =  get_weights_sum(l.part_detection_head)
+    sum2 =  get_weights_sum(l.loc_ref_head)
+    return sum1 + sum2 
+end
+
+# Chain
 struct Chain
     layers::Any
     lambda1::Any
@@ -212,7 +226,7 @@ function (c::Chain)(x, y)
     loss = c.loss(c(x), y)
     if training() # Only apply regularization during training, only to weights, not biases.
         c.lambda1 != 0 && (loss += c.lambda1 * sum(sum(abs, l.w) for l in c.layers))
-        c.lambda2 != 0 && (loss += c.lambda2 * sum(sum(abs2, l.w) for l in c.layers))
+        c.lambda2 != 0 && (loss += c.lambda2 * sum( get_weights_sum(l) for l in c.layers))
     end
     return loss
 end
@@ -311,6 +325,13 @@ function (rlx1_50::ResLayerX1_50)(x)
     return o
 end
 
+function get_weights_sum(l::ResLayerX1_50)
+    # sum(abs2, l.w)
+    sum1 = sum(abs2, l.batch_layer.w)
+    sum2 = sum(abs2, l.conv_w)
+    return sum1 + sum2 
+end
+
 # X0
 struct ResLayerX0
     batch_layer::Any
@@ -339,6 +360,13 @@ function (rlx0::ResLayerX0)(x)
     return o
 end
 
+function get_weights_sum(l::ResLayerX0)
+    # sum(abs2, l.w)
+    sum1 = sum(abs2, l.batch_layer.w)
+    sum2 = sum(abs2, l.conv_w)
+    return sum1 + sum2 
+end
+
 # X1
 struct ResLayerX1
     x0_layer::Any
@@ -356,6 +384,11 @@ function (rlx1::ResLayerX1)(x)
     else
         return relu_res
     end
+end
+
+function get_weights_sum(l::ResLayerX1)
+    # sum(abs2, l.w)
+    return get_weights_sum(l.x0_layer)
 end
 
 
@@ -392,6 +425,13 @@ ResLayerX2(w, ms; pads = [0, 1, 0], strides = [1, 1, 1], dilations = [1, 1, 1]) 
     )
 (rlx2::ResLayerX2)(x) = rlx2.x0_c_layer(rlx2.x1_b_layer((rlx2.x1_a_layer(x))))
 
+function get_weights_sum(l::ResLayerX2)
+    # sum(abs2, l.w)
+    sum1 = get_weights_sum(l.x1_a_layer) 
+    sum2 = get_weights_sum(l.x1_b_layer)
+    sum3 = get_weights_sum(l.x0_c_layer)
+    return sum1 + sum2 + sum3
+end
 
 # X3
 struct ResLayerX3
@@ -420,6 +460,12 @@ function (rlx3::ResLayerX3)(x)
     return relu.(res_a .+ res_b)
 end
 
+function get_weights_sum(l::ResLayerX3)
+    # sum(abs2, l.w)
+    sum1 = get_weights_sum(l.x0_a_layer) 
+    sum2 = get_weights_sum(l.x2_b_layer)
+    return sum1 + sum2
+end
 
 # X4
 struct ResLayerX4
@@ -429,6 +475,11 @@ ResLayerX4(w, ms; pads = [0, 1, 0], strides = [1, 1, 1], dilations = [1, 1, 1]) 
     ResLayerX4(ResLayerX2(w, ms; pads = pads, strides = strides, dilations = dilations))
 (rlx4::ResLayerX4)(x) = relu.(x .+ rlx4.x2_layer(x))
 
+function get_weights_sum(l::ResLayerX4)
+    # sum(abs2, l.w)
+    sum1 = get_weights_sum(l.x2_layer) 
+    return sum1
+end
 
 # X5
 struct ResLayerX5
@@ -489,4 +540,13 @@ function (rlx5::ResLayerX5)(x)
     else
         return x
     end
+end
+
+function get_weights_sum(l::ResLayerX5)
+    # sum(abs2, l.w)
+    sum = get_weights_sum(l.x3_layer) 
+      for layer in l.x4_layers
+       sum += get_weights_sum(layer)
+    end    
+    return sum
 end

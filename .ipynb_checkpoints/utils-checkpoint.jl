@@ -77,9 +77,11 @@ function substract_mean_img_from_data_for_element(enumerated_img, mean_pixel, at
 end
 
 function mirror_variant_data(variant_data)
-    new_x = variant_data.x 
-    new_y = variant_data.y
+    new_x = deepcopy(variant_data.x)
+    new_y = deepcopy(variant_data.y)
     counter = 1
+    original_shuffle = variant_data.shuffle 
+    variant_data.shuffle = false
     for (x, y) in variant_data
         arr_x = Array(x)
         arr_y = Array(y)
@@ -97,7 +99,7 @@ function mirror_variant_data(variant_data)
         end
     end
                 variant_minibatch(new_x, new_y;
-        shuffle = variant_data.shuffle,
+        shuffle = original_shuffle,
     xtype = variant_data.xtype,
         ytype = variant_data.ytype)
 end

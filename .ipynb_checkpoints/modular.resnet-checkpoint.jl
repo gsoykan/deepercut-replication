@@ -2,7 +2,7 @@ import CUDA
 include("models.jl")
 using MAT, OffsetArrays, FFTViews, ArgParse, Images, ImageMagick, Knet
 include("./deeper-cut/loss.jl")
-# TODO: add config here
+include("./deeper-cut/deeper-cut.config.jl")
 
 function get_params(params, atype)
     len = length(params["value"])
@@ -47,11 +47,11 @@ function get_params_from_deepercut_pretrained(atype)
         elseif endswith(name, "biases:0_bias")
             push!(ws, reshape(value, (1, 1, length(value), 1)))
         else
-            # permuted_value = permutedims( value, [2,1, 3, 4])
+            # permuted_value = permutedims( value, [2,1, 3, 4])
             push!(ws, value)
         end
     end
-    map(wi -> convert(atype, wi), ws), map(mi -> convert(atype, mi), ms)
+    w, ms = map(wi -> convert(atype, wi), ws), map(mi -> convert(atype, mi), ms)
 end
 
 function get_modular_resnet(
@@ -68,7 +68,11 @@ function get_modular_resnet(
     end
 
     if use_deepercut_resnet101_pretrained
-        w, ms = get_params_from_deepercut_pretrained(KnetArray{Float32})
+         o = Dict(:atype => KnetArray{Float32}, :model => model_file_path, :top => 10)
+        model = matread(abspath(o[:model]))
+        _, ms = get_params(model["params"], o[:atype])
+        
+        w, _ = get_params_from_deepercut_pretrained(KnetArray{Float32})
     else
         o = Dict(:atype => KnetArray{Float32}, :model => model_file_path, :top => 10)
         model = matread(abspath(o[:model]))
@@ -178,9 +182,9 @@ function generate_deeper_cut(;
 
     if use_deepercut_resnet101_pretrained
         head_weights, _ = get_params_from_deepercut_pretrained(KnetArray{Float32})
-        p_d_w = permutedims(head_weights[end-3], [2, 1, 3, 4])
+        p_d_w = head_weights[end-3] #permutedims(head_weights[end-3], [2, 1, 3, 4]) 
         p_d_b = head_weights[end-2]
-        l_r_w = permutedims(head_weights[end-1], [2, 1, 3, 4])
+        l_r_w = head_weights[end-1] #permutedims(head_weights[end-1], [2, 1, 3, 4])   
         l_r_b = head_weights[end]
         deepercut_head = DeeperCutHead(
              p_d_w,
@@ -218,6 +222,7 @@ function generate_deeper_cut(;
         deepercut_head;
         loss = deeper_cut_combined_loss,
         deeperCutOption = DeeperCutOption(; connect_res3_to_res5 = connect_res3_to_res5),
+        lambda2 = weight_decay
     )
     return deeper_cut
 end

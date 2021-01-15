@@ -1,6 +1,7 @@
 using Distributed
 using Images, FileIO
 include("mpii.annotation.reader.jl")
+include("../models.jl")
 
 # TODO: prepare an image 
 # then stack them to create whole dataset 
@@ -54,10 +55,12 @@ function preprocess_single_image_features(
     loaded_image = load(img_path)
 
     if use_global_scaling
-        scale_h = global_scale
-        scale_w = global_scale
+        jitter= rand(scale_jitter_interval[1]:0.01:scale_jitter_interval[2])
+        jittered_scale = jitter * global_scale
+        scale_h = jittered_scale
+        scale_w = jittered_scale
         scales = (scale_h, scale_w)
-        resized_image = imresize(loaded_image, ratio = global_scale)
+        resized_image = imresize(loaded_image, ratio = jittered_scale)
     else
         scaled_max_w = read_image_w
         scaled_max_h = read_image_h
