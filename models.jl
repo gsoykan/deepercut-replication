@@ -74,7 +74,17 @@ Deconv(w, b; stride = 1, padding = 0, atype = Knet.atype(), tag = "") =
 
 function (dc::Deconv)(x)
     dc_res = deconv4(dc.w, x; stride = dc.stride, padding = dc.padding)
-    res = dc_res .+ dc.b
+        
+ #=   println("deconv - dc res")
+    println(sum(isnan.(Array(dc_res))))
+    if ( (sum(isnan.(Array(dc_res))) > 0 ))
+          global  buggy_w = dc.w
+    global buggy_x = x
+    global buggy_stride = dc.stride
+    global buggy_padding = dc.padding
+    end=#
+    
+    res = dc_res .+ dc.b    
     return res
 end
 
@@ -152,12 +162,12 @@ struct DeeperCutHead
 end
 
 function (deeper_cut_head::DeeperCutHead)(x)
-    initial_x = deepcopy(x)
     # TODO: how shall we check if the x is intact between heads
-    part_detection_result = deeper_cut_head.part_detection_head(x)
+    part_detection_result = deeper_cut_head.part_detection_head(x)    
 
     if deeper_cut_head.is_loc_ref_enabled == true
         loc_ref_result = deeper_cut_head.loc_ref_head(x)
+        
         channel_dim = (size(part_detection_result) |> length) - 1
         combined_result = cat(part_detection_result, loc_ref_result; dims = channel_dim)
         return combined_result
@@ -188,9 +198,10 @@ end
 function (c::Chain)(x)
     connection_from3_to5 = nothing
     connection_from3_to5_loc_ref = nothing
+        
     for l in c.layers
         x = l(x)
-
+    
         if c.deeperCutOption != nothing && c.deeperCutOption.connect_res3_to_res5
             layer_tag = get_object_tag(l)
             if layer_tag == 3
@@ -253,7 +264,10 @@ struct BatchNormLayer
     function BatchNormLayer(pre_w, pre_ms; freeze = false)
         res_mean = popfirst!(pre_ms)
         # Trick to arrange variance value for new(er) batchnorm
-        res_variance = popfirst!(pre_ms) .^ 2 .- 1e-5
+        
+        # TODO: DO NOT FORGET TO ADD IT
+        
+        res_variance = popfirst!(pre_ms) .^ 2 # .- 1e-5
         ms = bnmoments(mean = res_mean, var = res_variance)
 
         w1 = pre_w[1]

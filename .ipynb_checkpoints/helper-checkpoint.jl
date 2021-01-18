@@ -140,9 +140,12 @@ function show_scmap_on_image(
         scmap_slice = Array(scmap[:,:, joint_id])
         # scmap_slice = imresize(scmap_slice, size_h, size_w)
         
-                #=
+               
         if focus_on_argmax != true
+            scmap_slice = imresize(scmap_slice, size(image)[1],  size(image)[2])
             color_idx = findall(scmap_slice .> confidence_threshold)
+                else
+         #=            
         elseif add_loc_ref_offset # && !should_use_scmap_size
            pred_f8 =  fetch_loc_reffed_max_point(scmap, joint_id)          
             color_idx = create_indexes_around_center(pred_f8, size_w)
@@ -153,7 +156,7 @@ function show_scmap_on_image(
                 =#
         pred_f8 =  fetch_loc_reffed_max_point(scmap, joint_id, add_loc_ref_offset)          
         color_idx = create_indexes_around_center(pred_f8,  max(size_h, size_w))
-                    
+                end
         img_r = @view perm[1, color_idx]
         img_g = @view perm[2, color_idx]
         img_b = @view perm[3, color_idx] 

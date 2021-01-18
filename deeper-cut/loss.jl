@@ -4,7 +4,8 @@ using Knet
 function deeper_cut_combined_loss(scores, labels)
     part_detection_labels = labels[:, :, 1:global_num_joints, :]
     part_detection_scores = scores[:, :, 1:global_num_joints, :]
-    part_detection_loss = sigmoid_cross_entropy_loss(part_detection_scores, part_detection_labels)
+    part_detection_loss =
+        sigmoid_cross_entropy_loss(part_detection_scores, part_detection_labels)
 
     score_channel_size = (scores|>size)[end-1]
     loc_ref_loss = 0

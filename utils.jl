@@ -4,6 +4,8 @@ using Images
 using Distributed
 include("./deeper-cut/deeper-cut.config.jl")
 include("./deeper-cut/mpii.annotation.reader.jl")
+using DataFrames
+using CSV
 
 function compute_loss_for_sets(model, named_x_y_tuples)
     loss_dict = Dict()
@@ -168,4 +170,41 @@ function exchange_symmetric_joint_ids_for_flipped_labels(labels)
         end
     end
     return copied_labels
+end
+
+function reverse_all_dims(array; until_dim)
+    dim_count = array |> size |> length
+    for i in 1:dim_count
+        if until_dim == i
+            break
+        end
+        array = reverse(array, dims=i)
+    end
+    return array
+end
+
+function write_acc_results_to_csv(filename, acc_results)
+    df = DataFrame( 
+    
+    Ankle1 = Float32[],
+    Knee1 = Float32[],
+    Hip1 = Float32[],
+    Hip2 = Float32[],
+    Knee2 = Float32[],
+    Ankle2 = Float32[],
+    Wrist1 = Float32[],
+    Elbow1 = Float32[],
+    Shoulder1 = Float32[],
+    Shoulder2 = Float32[],
+    Elbow2 = Float32[],
+    Wrist2 = Float32[],
+    Chin = Float32[],
+    TopHead = Float32[],
+)
+    for i in 1:size(acc_results, 1)
+    push!(df, acc_results[i, :])
+end
+    
+    CSV.write("$(filename).csv", df)
+    
 end

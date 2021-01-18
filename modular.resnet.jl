@@ -3,14 +3,15 @@ include("models.jl")
 using MAT, OffsetArrays, FFTViews, ArgParse, Images, ImageMagick, Knet
 include("./deeper-cut/loss.jl")
 include("./deeper-cut/deeper-cut.config.jl")
+include("./utils.jl")
 
 function get_params(params, atype)
     len = length(params["value"])
     ws, ms = [], []
     for k = 1:len
         name = params["name"][k]
-        value = convert(Array{Float32}, params["value"][k])
-
+        value = convert(Array{Float32}, params["value"][k])   
+        
         if endswith(name, "moments")
             push!(ms, reshape(value[:, 1], (1, 1, size(value, 1), 1)))
             push!(ms, reshape(value[:, 2], (1, 1, size(value, 1), 1)))
@@ -40,14 +41,18 @@ function get_params_from_deepercut_pretrained(atype)
         value = convert(Array{Float32}, params["value"][k])
 
         if endswith(name, "moments")
+           # value = reverse_all_dims(value; until_dim=2)
             push!(ms, reshape(value[:, 1], (1, 1, size(value, 1), 1)))
-            push!(ms, reshape(value[:, 2], (1, 1, size(value, 1), 1)))
+            push!(ms, reshape( sqrt.(value[:, 2]), (1, 1, size(value, 1), 1)))
         elseif endswith(name, "gamma:0_mult") || endswith(name, "beta:0_bias")
+            # value = reverse_all_dims(value; until_dim=3)
             push!(ws, reshape(value, (1, 1, length(value), 1)))
         elseif endswith(name, "biases:0_bias")
+            value = reverse_all_dims(value; until_dim=3)
             push!(ws, reshape(value, (1, 1, length(value), 1)))
         else
-            # permuted_value = permutedims( value, [2,1, 3, 4])
+           # permuted_value = permutedims( value, [2,1, 3, 4])
+            value = reverse_all_dims(value; until_dim=3)
             push!(ws, value)
         end
     end
@@ -70,9 +75,9 @@ function get_modular_resnet(
     if use_deepercut_resnet101_pretrained
          o = Dict(:atype => KnetArray{Float32}, :model => model_file_path, :top => 10)
         model = matread(abspath(o[:model]))
-        _, ms = get_params(model["params"], o[:atype])
+       # _, ms = get_params(model["params"], o[:atype])
         
-        w, _ = get_params_from_deepercut_pretrained(KnetArray{Float32})
+        w, ms = get_params_from_deepercut_pretrained(KnetArray{Float32})
     else
         o = Dict(:atype => KnetArray{Float32}, :model => model_file_path, :top => 10)
         model = matread(abspath(o[:model]))
