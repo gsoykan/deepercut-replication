@@ -56,7 +56,6 @@ global_locref_stdev = 7.2801
 locref_loss_weight = 0.05
 PCKh_range=0.5
 
-
 mean_pixel = [123.68 / 255, 116.779 / 255, 103.939 / 255]
 reshaped_mean_pixel = reshape(mean_pixel, (1, 1, 3, 1));
 mean_pixel_255 = [123.68, 116.779, 103.939]
