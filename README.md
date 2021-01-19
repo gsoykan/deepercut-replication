@@ -1,4 +1,4 @@
-# A Replication Study of "DeeperCut Part Detectors" with Knet and Julia Lang
+# A Replication Study of "DeeperCut Part Detectors" with Knet and Julia
 
 The aim of this project is to replicate the works of DeeperCut and then combine it with the findings of DeepLabCut. However, this goal was not realized because of unfruitful results of the replication and hence resulted with human body part detector. Human body part detector consists of deep fully convolutional neural networks and generates bottom-up proposals for body parts. Generated proposals then evaluated with both single person data in context with only single person in image and single person among other people. Finally, the pose of a single person for an input image can be drawn by using the result of the part detector. 
 
