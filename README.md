@@ -19,13 +19,13 @@ Pkg.add("Package Name")
 ```
 ## Training
 
-# Pretrained Weights for Initial Configuration
+# Pretrained Weights for Initial Configuration
 
 Model uses pretrained weights from ImageNet. So those should be assigned in "modular.resnet.jl" as "model_file_path".
 Here is the link for pretrained weights. https://www.vlfeat.org/matconvnet/pretrained/
 Please download, you may download weight files for ResNet-50, ResNet-101, ResNet-152
 
-# Dataset 
+# Dataset 
 
 This project makes use of MPII Human Pose Dataset. "The dataset includes around 25K images containing over 40K people with annotated body joints. The images were systematically collected using an established taxonomy of every day human activities. Overall the dataset covers 410 human activities and each image is provided with an activity label. Each image was extracted from a YouTube video and provided with preceding and following un-annotated frames. In addition, for the test set we obtained richer annotations including body part occlusions and 3D torso and head orientations."
 
