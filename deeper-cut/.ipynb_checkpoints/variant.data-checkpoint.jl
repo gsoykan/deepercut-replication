@@ -69,11 +69,23 @@ end
             return ((xbatch, ybatch), nexti)
         end
     else
-        xbatch = convert(d.xtype, d.x[id])
+
+        if !(isa(d.x[id], d.xtype))
+            xbatch = convert(d.xtype, d.x[id])
+        else
+            xbatch = d.x[id]
+        end
+
         if d.y == nothing
             return (xbatch, nexti)
         else
-            ybatch = convert(d.ytype, d.y[id])
+
+            if !(isa(d.y[id], d.ytype))
+                ybatch = convert(d.ytype, d.y[id])
+            else
+                ybatch = d.y[id]
+            end
+
             return ((xbatch, ybatch), nexti)
         end
     end

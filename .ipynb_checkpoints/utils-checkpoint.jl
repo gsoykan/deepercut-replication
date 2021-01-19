@@ -82,7 +82,7 @@ function mirror_variant_data(variant_data)
     new_x = deepcopy(variant_data.x)
     new_y = deepcopy(variant_data.y)
     counter = 1
-    original_shuffle = variant_data.shuffle 
+    original_shuffle = variant_data.shuffle
     variant_data.shuffle = false
     for (x, y) in variant_data
         arr_x = Array(x)
@@ -100,22 +100,27 @@ function mirror_variant_data(variant_data)
             println(counter)
         end
     end
-                variant_minibatch(new_x, new_y;
+    variant_minibatch(
+        new_x,
+        new_y;
         shuffle = original_shuffle,
-    xtype = variant_data.xtype,
-        ytype = variant_data.ytype)
+        xtype = variant_data.xtype,
+        ytype = variant_data.ytype,
+    )
 end
 
 function mirror_raw_batch_item(batch_item, is_label, atype)
     arr = Array(batch_item)
     arr = reduce_dim(arr)
-    flipped = is_label ? exchange_symmetric_joint_ids_for_flipped_labels(fliplr3D(arr)) : fliplr3D(arr)
+    flipped =
+        is_label ? exchange_symmetric_joint_ids_for_flipped_labels(fliplr3D(arr)) :
+        fliplr3D(arr)
     flipped = add_dim(flipped) |> atype
     return flipped
 end
 
-function mirror_data_items_for_batch(data_items) 
-    mirrored_data_items =  map(mirror_data_item, data_items)
+function mirror_data_items_for_batch(data_items)
+    mirrored_data_items = map(mirror_data_item, data_items)
     return [data_items..., mirrored_data_items...]
 end
 
@@ -174,37 +179,36 @@ end
 
 function reverse_all_dims(array; until_dim)
     dim_count = array |> size |> length
-    for i in 1:dim_count
+    for i = 1:dim_count
         if until_dim == i
             break
         end
-        array = reverse(array, dims=i)
+        array = reverse(array, dims = i)
     end
     return array
 end
 
 function write_acc_results_to_csv(filename, acc_results)
-    df = DataFrame( 
-    
-    Ankle1 = Float32[],
-    Knee1 = Float32[],
-    Hip1 = Float32[],
-    Hip2 = Float32[],
-    Knee2 = Float32[],
-    Ankle2 = Float32[],
-    Wrist1 = Float32[],
-    Elbow1 = Float32[],
-    Shoulder1 = Float32[],
-    Shoulder2 = Float32[],
-    Elbow2 = Float32[],
-    Wrist2 = Float32[],
-    Chin = Float32[],
-    TopHead = Float32[],
-)
-    for i in 1:size(acc_results, 1)
-    push!(df, acc_results[i, :])
-end
-    
+    df = DataFrame(
+        Ankle1 = Float32[],
+        Knee1 = Float32[],
+        Hip1 = Float32[],
+        Hip2 = Float32[],
+        Knee2 = Float32[],
+        Ankle2 = Float32[],
+        Wrist1 = Float32[],
+        Elbow1 = Float32[],
+        Shoulder1 = Float32[],
+        Shoulder2 = Float32[],
+        Elbow2 = Float32[],
+        Wrist2 = Float32[],
+        Chin = Float32[],
+        TopHead = Float32[],
+    )
+    for i = 1:size(acc_results, 1)
+        push!(df, acc_results[i, :])
+    end
+
     CSV.write("$(filename).csv", df)
-    
+
 end

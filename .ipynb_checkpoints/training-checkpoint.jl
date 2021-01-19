@@ -87,7 +87,7 @@ function trainresults(
         #   (snapshot(x) for x in takenth(progress(training), length(data_trn))) |> collect
 
         snapshots = (snapshot(x) for x in takenth(progress(training), length(data_trn)))
-        intermediate_res = reshape(collect(flatten(snapshots)), (9, :))
+        intermediate_res = reshape(collect(Iterators.flatten(snapshots)), (9, :))
         if isempty(results)
             results = intermediate_res
         else

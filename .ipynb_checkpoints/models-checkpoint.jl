@@ -268,7 +268,7 @@ struct BatchNormLayer
         # TODO: DO NOT FORGET TO ADD IT
         
         res_variance = popfirst!(pre_ms) .^ 2 # .- 1e-5
-        ms = bnmoments(mean = res_mean, var = res_variance)
+        ms = bnmoments(momentum=0.9, mean = res_mean, var = res_variance)
 
         w1 = pre_w[1]
         w2 = pre_w[2]
@@ -286,7 +286,7 @@ struct BatchNormLayer
 end
 
 function (batch_norm_layer::BatchNormLayer)(x)
-    return batchnorm(x, batch_norm_layer.ms, batch_norm_layer.w; eps = 1e-5)
+    return batchnorm(x, batch_norm_layer.ms, batch_norm_layer.w; eps = 0, training=false)
 end
 
 # ResNet 50 initial layer
@@ -309,9 +309,8 @@ function ResLayerX1_50(
     pool_window_size = 3,
     pool_stride = 2,
     pool_padding = 1,
-    freeze_batchnorm = true,
 )
-    bnl = BatchNormLayer(w[3:4], ms; freeze = freeze_batchnorm)
+    bnl = BatchNormLayer(w[3:4], ms)
     return ResLayerX1_50(
         bnl,
         param(w[1]; atype = Knet.atype()),
@@ -341,7 +340,8 @@ end
 
 function get_weights_sum(l::ResLayerX1_50)
     # sum(abs2, l.w)
-    sum1 = sum(abs2, l.batch_layer.w)
+    # TODO: BATCHNORMLAYER FIX
+     sum1 = 0 # sum(abs2, l.batch_layer.w)    
     sum2 = sum(abs2, l.conv_w)
     return sum1 + sum2 
 end
@@ -356,8 +356,8 @@ struct ResLayerX0
 end
 # Predetermined weights
 # TODO: should we try to make bnl params??
-function ResLayerX0(w, ms; padding = 0, stride = 1, dilation = 1, freeze_batchnorm = true)
-    bnl = BatchNormLayer(w[2:3], ms; freeze = freeze_batchnorm)
+function ResLayerX0(w, ms; padding = 0, stride = 1, dilation = 1)
+    bnl = BatchNormLayer(w[2:3], ms)
     return ResLayerX0(bnl, param(w[1]; atype = Knet.atype()), padding, stride, dilation)
 end
 
@@ -376,7 +376,8 @@ end
 
 function get_weights_sum(l::ResLayerX0)
     # sum(abs2, l.w)
-    sum1 = sum(abs2, l.batch_layer.w)
+     # TODO: BATCHNORMLAYER FIX
+    sum1 = 0 #sum(abs2, l.batch_layer.w)
     sum2 = sum(abs2, l.conv_w)
     return sum1 + sum2 
 end
