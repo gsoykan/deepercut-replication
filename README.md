@@ -34,6 +34,40 @@ This project makes use of MPII Human Pose Dataset. "The dataset includes around 
 Downloaded dataset initially should be preprocessed by the DeeperCut's preprocessing script for rescaling and cropping.
 - https://github.com/eldar/pose-tensorflow/blob/master/models/README.md#training-a-model-with-mpii-pose-dataset-single-person 
 
+## Configuration
+
+For configuration of training this file needs to be edited: **deeper-cut.config.jl**.
+Editable parameters in the file are as follows;
+
+```
+path_to_processed_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/dataset.mat"
+path_to_single_person_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/annolist-singlePerson-h400.mat"
+path_to_full_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/annolist-full-h400.mat"
+path_to_multi_person_mat = "/userfiles/gsoykan20/mpii_human_pose/cropped/annolist-multPerson-h400.mat"
+
+global_scale = 0.8452830189
+scale_jitter_interval = [0.85, 1.15]
+pos_dist_thresh = 17
+
+weight_decay = 0.0001
+momentum_gamma = 0.9
+
+global_locref_stdev = 7.2801
+locref_loss_weight = 0.05
+PCKh_range=0.5
+
+
+mean_pixel = [123.68 / 255, 116.779 / 255, 103.939 / 255]
+reshaped_mean_pixel = reshape(mean_pixel, (1, 1, 3, 1));
+mean_pixel_255 = [123.68, 116.779, 103.939]
+reshaped_mean_pixel_255 = reshape(mean_pixel_255, (1, 1, 3, 1));
+
+use_locref_mask_weights = false
+global_add_random_mirroring = false
+
+pre_full_path = "/kuacc/users/gsoykan20/comp541_term_project/deeper-cut/results/"
+```
+
 # References
 ```
 @inproceedings{insafutdinov2016deepercut,
