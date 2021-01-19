@@ -2,7 +2,7 @@
 
 The aim of this project is to replicate the works of DeeperCut and then combine it with the findings of DeepLabCut. However, this goal was not realized because of unfruitful results of the replication and hence resulted with human body part detector. Human body part detector consists of deep fully convolutional neural networks and generates bottom-up proposals for body parts. Generated proposals then evaluated with both single person data in context with only single person in image and single person among other people. Finally, the pose of a single person for an input image can be drawn by using the result of the part detector. 
 
-## Prerequisites
+# Prerequisites
 
 The implementation is in Julia 1.5.3 and Knet 1.4.6. 
 
@@ -17,24 +17,24 @@ Here is how you can install a package to your Julia environment.
 using Pkg
 Pkg.add("Package Name")
 ```
-## Training
+# Training
 
-# Pretrained Weights for Initial Configuration
+## Pretrained Weights for Initial Configuration
 
 Model uses pretrained weights from ImageNet. So those should be assigned in "modular.resnet.jl" as "model_file_path".
 Here is the link for pretrained weights. https://www.vlfeat.org/matconvnet/pretrained/
 Please download, you may download weight files for ResNet-50, ResNet-101, ResNet-152
 
-# Dataset 
+## Dataset 
 
 This project makes use of MPII Human Pose Dataset. "The dataset includes around 25K images containing over 40K people with annotated body joints. The images were systematically collected using an established taxonomy of every day human activities. Overall the dataset covers 410 human activities and each image is provided with an activity label. Each image was extracted from a YouTube video and provided with preceding and following un-annotated frames. In addition, for the test set we obtained richer annotations including body part occlusions and 3D torso and head orientations."
 
-# Preprocessing
+## Preprocessing
 
 Downloaded dataset initially should be preprocessed by the DeeperCut's preprocessing script for rescaling and cropping.
 - https://github.com/eldar/pose-tensorflow/blob/master/models/README.md#training-a-model-with-mpii-pose-dataset-single-person 
 
-## References
+# References
 ```
 @inproceedings{insafutdinov2016deepercut,
 	author = {Eldar Insafutdinov and Leonid Pishchulin and Bjoern Andres and Mykhaylo Andriluka and Bernt Schieke},
