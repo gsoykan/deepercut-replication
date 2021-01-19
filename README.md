@@ -17,7 +17,22 @@ Here is how you can install a package to your Julia environment.
 using Pkg
 Pkg.add("Package Name")
 ```
-TODO: ADD required files
+## Training
+
+# Pretrained Weights for Initial Configuration
+
+Model uses pretrained weights from ImageNet. So those should be assigned in "modular.resnet.jl" as "model_file_path".
+Here is the link for pretrained weights. https://www.vlfeat.org/matconvnet/pretrained/
+Please download, you may download weight files for ResNet-50, ResNet-101, ResNet-152
+
+# Dataset 
+
+This project makes use of MPII Human Pose Dataset. "The dataset includes around 25K images containing over 40K people with annotated body joints. The images were systematically collected using an established taxonomy of every day human activities. Overall the dataset covers 410 human activities and each image is provided with an activity label. Each image was extracted from a YouTube video and provided with preceding and following un-annotated frames. In addition, for the test set we obtained richer annotations including body part occlusions and 3D torso and head orientations."
+
+# Preprocessing
+
+Downloaded dataset initially should be preprocessed by the DeeperCut's preprocessing script for rescaling and cropping.
+- https://github.com/eldar/pose-tensorflow/blob/master/models/README.md#training-a-model-with-mpii-pose-dataset-single-person 
 
 ## References
 ```
@@ -34,4 +49,11 @@ TODO: ADD required files
 	booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
 	year = {2016},
 	url = {http://arxiv.org/abs/1511.06645}
+}
+@inproceedings{andriluka14cvpr,
+               author = {Mykhaylo Andriluka and Leonid Pishchulin and Peter Gehler and Schiele, Bernt}
+               title = {2D Human Pose Estimation: New Benchmark and State of the Art Analysis},
+               booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+               year = {2014},
+               month = {June}
 }
