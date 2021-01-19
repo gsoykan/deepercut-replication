@@ -2,7 +2,22 @@
 
 The aim of this project is to replicate the works of DeeperCut and then combine it with the findings of DeepLabCut. However, this goal was not realized because of unfruitful results of the replication and hence resulted with human body part detector. Human body part detector consists of deep fully convolutional neural networks and generates bottom-up proposals for body parts. Generated proposals then evaluated with both single person data in context with only single person in image and single person among other people. Finally, the pose of a single person for an input image can be drawn by using the result of the part detector. 
 
-## Prerequisites
+## Prerequisites
+
+The implementation is in Julia 1.5.3 and Knet 1.4.6. 
+
+- julia download link https://julialang.org/downloads/
+- setting up Knet: https://denizyuret.github.io/Knet.jl/latest/install/
+- using IJulia for ipynb's that are using Julia as kernel: https://github.com/JuliaLang/IJulia.jl
+
+- list of all packages used in the project: ["ArgParse", "AutoGrad", "CSV", "CUDA", "CoordinateTransformations", "DataFrames", "FFTViews", "FileIO", "IJulia", "ImageDraw", "ImageMagick", "ImageTransformations", "ImageView", "Images", "IterTools", "JuliaFormatter", "Knet", "MAT", "NNlib", "OffsetArrays", "Plots", "Rotations", "TestImages"]
+
+Here is how you can install a package to your Julia environment.
+```bash
+using Pkg
+Pkg.add("Package Name")
+```
+TODO: ADD required files
 
 ## References
 ```
