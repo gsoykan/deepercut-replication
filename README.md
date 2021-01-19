@@ -67,6 +67,25 @@ global_add_random_mirroring = false
 pre_full_path = "/kuacc/users/gsoykan20/comp541_term_project/deeper-cut/results/"
 ```
 
+## Training Script
+
+**mpii.trainer.ipynb** can be used for training from the ground up. However, it might take time to load all the data in the first place. So, once you load training and test data, you may wish to save them. In order to save an object, data or model,  below code can be used. 
+
+```
+Knet.save("<data>.jld2", <data_tag>, data)
+```
+In order to load an object this can be used:
+```
+loaded_data = Knet.load("<data>.jld2", <data_tag>)
+```
+## Loading Pretrained Model from the Original Paper
+
+- TODO:
+
+# Measuring Accuracy
+
+- TODO: 
+
 # References
 ```
 @inproceedings{insafutdinov2016deepercut,
