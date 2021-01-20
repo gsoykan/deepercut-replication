@@ -150,10 +150,10 @@ function visualize_part_detection_results(
     show_body_skeleton = false,
     should_color_scmap_for_gt = true,
 )
-
+```
  
 # References
-```
+
 @inproceedings{insafutdinov2016deepercut,
 	author = {Eldar Insafutdinov and Leonid Pishchulin and Bjoern Andres and Mykhaylo Andriluka and Bernt Schieke},
 	title = {DeeperCut: A Deeper, Stronger, and Faster Multi-Person Pose Estimation Model},
