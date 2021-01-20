@@ -130,8 +130,6 @@ end
     
 ```
 
-First you must download pretrained weights from this link: https://drive.google.com/file/d/11478RdsrcqfXRwvBqaI5aodUbbRYWn_4/view?usp=sharing
-
 # Measuring Accuracy
 
 - TODO: 
