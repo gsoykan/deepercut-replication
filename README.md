@@ -136,8 +136,22 @@ end
 
 # Visualization
 
-- TODO:
+For the visualization, **visualizer.jl** should be used with function;
 
+```
+function visualize_part_detection_results(
+    model,
+    data;
+    visualization_idxs = 1:10,
+    pred_threshold = 0.2,
+    focus_on_argmax = false,
+    add_loc_ref_offset = false,
+    show_only_predictions = false,
+    show_body_skeleton = false,
+    should_color_scmap_for_gt = true,
+)
+
+ 
 # References
 ```
 @inproceedings{insafutdinov2016deepercut,
