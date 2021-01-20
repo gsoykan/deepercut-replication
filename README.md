@@ -82,6 +82,8 @@ loaded_data = Knet.load("<data>.jld2", <data_tag>)
 
 - First you must download pretrained weights from this link: https://drive.google.com/file/d/11478RdsrcqfXRwvBqaI5aodUbbRYWn_4/view?usp=sharing
 
+- Then you can update **get_params_from_deepercut_pretrained** function and **groups_path** variable for the path of the downloaded file in the **modular.resnet.jl**.
+
 - Then you can run below cells of the "deepercut.weight.transfer.ipynb" ipython notebook. 
 
 ```
@@ -90,7 +92,20 @@ deepercut_with_loc_ref_101_pretrained = generate_deeper_cut(;should_use_resnet10
     is_loc_ref_enabled = true,
     connect_res3_to_res5 = false,
     use_deepercut_resnet101_pretrained = true);
-    
+```
+```    
+demo_image_path = "./google-drive/image.png"
+loaded_image = load(demo_image_path);
+   macfix = convert(Array{FixedPointNumbers.Normed{UInt8,8},3}, channelview(loaded_image))
+    demo_img = permutedims(macfix, (2, 3, 1));
+demo_img |> size
+demo_img = (demo_img |> Array )  .* 255
+demo_img = (demo_img |> add_dim)   .- (reshaped_mean_pixel .* 255)
+# permuted_demo = permutedims(demo_img, [4, 1, 2, 3])
+#demo_pred = deepercut_with_loc_ref_101_pretrained(Knet.atype()(reverse(demo_img, dims=1)));
+demo_pred = deepercut_with_loc_ref_101_pretrained(Knet.atype()(demo_img));
+```
+```
 should_use_scmap_size = false
 return_single_image = true
 res = show_scmap_on_image(
