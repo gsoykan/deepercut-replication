@@ -132,7 +132,29 @@ end
 
 # Measuring Accuracy
 
-- TODO: 
+Measuing accuracy can be done with two methods. First one is naive PCK and second one is actual PCK.
+Naive PCK measures whether argmax of the output is within the predetermined label. On the other hand, actual PCK measures distances between actual joint position and predicted joint location.
+
+- **accuracy.jl** should be used.
+- naive PCK
+
+```
+function modelized_naive_pck_sigm(model, data)
+```
+
+- PCKh
+
+```
+function modelized_PCKh_sigm(
+    model,
+    data,
+    data_items;
+    h_range = PCKh_range,
+    consider_threshold = output_consider_threshold,
+)
+```
+
+- **data_items** are the items read from data_set and has the annotations for head size and actual joint location annotations which is needed for PCKh measurement.
 
 # Visualization
 
