@@ -80,7 +80,42 @@ loaded_data = Knet.load("<data>.jld2", <data_tag>)
 ```
 ## Loading Pretrained Model from the Original Paper
 
-- TODO:
+- First you must download pretrained weights from this link: https://drive.google.com/file/d/11478RdsrcqfXRwvBqaI5aodUbbRYWn_4/view?usp=sharing
+
+- Then you can run below cells of the "deepercut.weight.transfer.ipynb" ipython notebook. 
+
+```
+deepercut_with_loc_ref_101_pretrained = generate_deeper_cut(;should_use_resnet101 = true,
+    should_use_resnet50 = false,
+    is_loc_ref_enabled = true,
+    connect_res3_to_res5 = false,
+    use_deepercut_resnet101_pretrained = true);
+    
+should_use_scmap_size = false
+return_single_image = true
+res = show_scmap_on_image(
+   ((demo_img  .+ (reshaped_mean_pixel .* 255)) |> reduce_dim) ./ 255 ,
+    #((demo_img) |> reduce_dim) ./ 255 ,
+    demo_pred;
+    confidence_threshold=0.4,
+    should_use_scmap_size= should_use_scmap_size,
+    return_single_image= return_single_image,
+    should_color_scmap=true,
+    focus_on_argmax = true,
+    add_loc_ref_offset = true,
+    use_sigm = true
+)
+if return_single_image
+    res |> display #imrotate(res, pi/2)
+else    
+for  r in res
+  imrotate(r, π/2) |> display
+end
+end
+    
+```
+
+First you must download pretrained weights from this link: https://drive.google.com/file/d/11478RdsrcqfXRwvBqaI5aodUbbRYWn_4/view?usp=sharing
 
 # Measuring Accuracy
 
